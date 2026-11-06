@@ -473,6 +473,16 @@ func (s *Server) makeState(ctx context.Context, h sdk.Host, sa stateArgs) error 
 		"let &runtimepath = " + quote(newRuntimepath),
 	}
 
+	// The Go modules of the plugins: goda#build() of goda.vim builds the
+	// binaries of the plugins with them.
+	var modules []string
+	for _, p := range available {
+		if path := p.String("path"); path != "" && exists(filepath.Join(path, "go.mod")) {
+			modules = append(modules, quote(path))
+		}
+	}
+	startup = append(startup, "let g:goda#workspace = ["+strings.Join(modules, ", ")+"]")
+
 	for _, hf := range ret.HooksFiles {
 		lines, err := readHooksFile(ctx, h, hf)
 		if err != nil {

@@ -37,7 +37,7 @@ The TOML files of dpp-ext-toml work as they are.
 ==============================================================================
 INSTALL                                                       *goda-pm-install*
 
-It needs Vim 9.1 or Neovim 0.11, Go 1.26, git and goda.vim:
+It needs Vim 9.1 or Neovim 0.11, Go 1.26, git and goda.vim 0.7 or later:
 
 https://github.com/Shougo/goda.vim
 
@@ -140,6 +140,15 @@ The state is made again when the files it was made from change: >vim
 	      \ : if !goda_pm#check_files()->empty()
 	      \ |   call goda_pm#make_state()
 	      \ | endif
+<
+The state sets |g:goda#workspace| of goda.vim to the directories of the
+plugins that are Go modules: |goda#build()| (the build() of the goda.vim
+plugins) builds their binaries with the plugins installed (and those of a
+local directory), not with the versions their configurations require.
+After an update, build them again, with no "go get -u": >toml
+	[[plugins]]
+	repo = 'Shougo/goda-fi.vim'
+	hook_post_update = 'call goda_fi#build()'
 <
 ==============================================================================
 OPTIONS                                                       *goda-pm-options*
@@ -251,9 +260,9 @@ goda_pm#exts()
 
                                                            *goda_pm#build()*
 goda_pm#build()
-		Build the configuration (after "go mod tidy") into
-		|g:goda_pm#binary|.  The running binary is stopped, and the
-		new one starts with the next request.
+		Build the configuration into |g:goda_pm#binary|, with
+		|goda#build()| of goda.vim.  The running binary is stopped,
+		and the new one starts with the next request.
 
                                                        *goda_pm#ext#toml#syntax()*
 goda_pm#ext#toml#syntax()

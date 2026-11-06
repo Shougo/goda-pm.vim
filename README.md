@@ -17,14 +17,17 @@ instead of TypeScript, and no Deno.
 - The source `goda_pm` of [goda-fi.vim](https://github.com/Shougo/goda-fi.vim)
   (ddu-source-dpp), in `ext/fi/pmfi`.
 - A Lua entry: `require('goda_pm')`.
+- The binaries of the goda.vim plugins are built with the plugins installed
+  (`g:goda#workspace` of goda.vim): after an update, build them again, with no
+  `go get -u`.
 
 ## Requirements
 
 - Vim 9.1 or Neovim 0.11
 - Go 1.26
 - git
-- [goda.vim](https://github.com/Shougo/goda.vim) (to make the state and to
-  install the plugins)
+- [goda.vim](https://github.com/Shougo/goda.vim) 0.7 or later (to make the
+  state and to install the plugins)
 
 ## Usage
 

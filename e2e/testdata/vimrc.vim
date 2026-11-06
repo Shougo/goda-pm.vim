@@ -86,6 +86,7 @@ function! s:update() abort
   call s:check('local path', goda_pm#get('bar.vim').path, $GODA_PM_LOCAL->substitute('\\', '/', 'g') . '/bar.vim')
   call s:check('local url', goda_pm#get('bar.vim').url, 'https://example.com/test/bar.vim.git')
   call s:check('if', exists('g:skipped'), 0)
+  call s:check('goda#workspace', map(copy(g:goda#workspace), 'fnamemodify(v:val, ":t")'), ['merged.vim'])
   call s:check('help', s:help('foo'), 'foo.txt')
   call s:check('help of a merged plugin', s:help('merged.vim'), 'merged.txt')
   call s:check('help of a README', s:help('lazy-func.vim-Usage'), 'README.md')

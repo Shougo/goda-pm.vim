@@ -122,6 +122,8 @@ func setup(t *testing.T) *env {
 		"doc/merged.txt":      "*merged.txt*\n\n*merged.vim*\n",
 		"ftdetect/merged.vim": "autocmd BufRead,BufNewFile *.mergedft setfiletype mergedft\n",
 		"README.md":           "# merged.vim\n",
+		// A Go module: in g:goda#workspace.
+		"go.mod": "module example.com/merged\n\ngo 1.26\n",
 	})
 	e.repo(t, "bar.vim", map[string]string{"plugin/bar.vim": "let g:bar_remote = 1\n"})
 	e.repo(t, "skipped.vim", map[string]string{"plugin/skipped.vim": "let g:skipped = 1\n"})
