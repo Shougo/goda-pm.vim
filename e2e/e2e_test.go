@@ -174,6 +174,9 @@ repo = 'example.com/test/foo.vim'
 hook_add = 'let g:hook_add_foo = 1'
 hook_post_update = '''
 let g:post_update_foo = get(g:, 'post_update_foo', 0) + 1
+if get(g:, 'test_build')
+  call goda_pm#build()
+endif
 '''
 
 [[plugins]]
@@ -237,7 +240,24 @@ hook_source = 'let g:multiple_source = 1'
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The configuration goda_pm#build() builds: testbin, with this
+	// goda-pm.vim.
+	cfg := filepath.Join(dir, "config")
+	main, err := os.ReadFile(filepath.Join("testbin", "main.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goSum, err := os.ReadFile(filepath.Join("..", "go.sum"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	write(t, filepath.Join(cfg, "main.go"), string(main))
+	write(t, filepath.Join(cfg, "go.sum"), string(goSum))
+	write(t, filepath.Join(cfg, "go.mod"), fmt.Sprintf("module goda-pm-e2e-config\n\ngo 1.26.0\n\n"+
+		"require github.com/Shougo/goda-pm.vim v0.1.0\n\nreplace github.com/Shougo/goda-pm.vim => %s\n",
+		filepath.ToSlash(root)))
 	e.vars = append(e.vars,
+		"GODA_PM_CONFIG_DIR="+cfg,
 		"GODA_VIM_DIR="+strings.TrimSpace(string(out)),
 		"GODA_PM_DIR="+root,
 		"GODA_PM_BINARY="+bin,

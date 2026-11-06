@@ -15,6 +15,7 @@ let s:phase = $GODA_PM_PHASE
 execute 'set runtimepath^=' . fnameescape($GODA_VIM_DIR)
 execute 'set runtimepath^=' . fnameescape($GODA_PM_DIR)
 let g:goda_pm#binary = $GODA_PM_BINARY
+let g:goda_pm#config_dir = $GODA_PM_CONFIG_DIR
 let s:base = $GODA_PM_BASE
 
 function! s:check(name, got, want) abort
@@ -124,15 +125,34 @@ function! s:update() abort
 
   " Update: foo.vim has a new commit.
   call s:check('exts', goda_pm#exts().installer->index('update') >= 0, v:true)
+  " hook_post_update builds goda-pm: after the update.
+  let g:test_build = 1
+  let bin_time = getftime(g:goda_pm#binary)
   call goda_pm#sync_ext_action('installer', 'update')
   call s:check('update_done', g:update_done, 1)
-  call s:check('updated', s:names(goda_pm#sync_ext_action('installer', 'getUpdated')), ['foo.vim'])
+  " (The build may have restarted the binary already: the log of the
+  " installer, not getUpdated.)
+  let log = readfile($GODA_PM_FILES . '/installer.log')
+  let last = len(log) - 1 - index(reverse(copy(log)), 'Updated plugins:')
+  call s:check('updated', log[last + 1 :], ['  foo.vim(1 change)'] + log[last + 2 :])
   call s:check('hook_post_update', get(g:, 'post_update_foo'), 1)
   call s:check('rollback', filereadable(s:base . '/' . goda_pm#util#_get_name()
         \ . '/rollbacks/latest/rollback.json'), 1)
   " The documents changed: the state is made again.
   call s:check('make_state_post', g:make_state_post, 1)
   call s:check('unknown action', goda_pm#sync_ext_action('installer', 'nope'), 0)
+
+  " The build after the update.
+  let waited = 0
+  while execute('messages') !~# 'goda-pm: built' && waited < 120000
+    sleep 100m
+    let waited += 100
+  endwhile
+  let messages = execute('messages')
+  call s:check('build waits', messages =~# 'goda-pm: the build waits for the running actions', 1)
+  call s:check('built', messages =~# 'goda-pm: built', 1)
+  call s:check('binary replaced', getftime(g:goda_pm#binary) >= bin_time, 1)
+  call s:check('new binary', goda_pm#exts().installer->index('update') >= 0, v:true)
 endfunction
 
 function! s:updated() abort

@@ -263,6 +263,13 @@ goda_pm#build()
 		Build the configuration into |g:goda_pm#binary|, with
 		|goda#build()| of goda.vim.  The running binary is stopped,
 		and the new one starts with the next request.
+		While the binary runs an action or makes the state, the
+		build waits for them: hook_post_update of goda-pm.vim can
+		call it. >toml
+		[[plugins]]
+		repo = 'Shougo/goda-pm.vim'
+		hook_post_update = 'call goda_pm#build()'
+<
 
                                                        *goda_pm#ext#toml#syntax()*
 goda_pm#ext#toml#syntax()

@@ -14,6 +14,9 @@ let s:version = #{version: 1, module: 'github.com/Shougo/goda-pm.vim'}
 
 " The calls that are waited for (goda_pm#_done()), by id.
 let s:results = {}
+" The calls the binary runs, by id: goda_pm#build() waits for them.
+let s:running = {}
+let s:build_waits = 0
 let s:next_id = 0
 
 " ---------------------------------------------------------------------------
@@ -52,9 +55,27 @@ endfunction
 " goda#build(): with the plugins installed (g:goda#workspace). The running
 " binary is stopped, and the new one starts with the next request. When the
 " build fails, the previous binary keeps running.
+"
+" While the binary runs an action or makes the state (a hook_post_update of
+" the installer calls it, say), the build waits for them: it would stop the
+" binary in the middle of them.
 function! goda_pm#build() abort
+  if !empty(s:running) && goda#is_running('pm')
+    let s:build_waits = 1
+    echomsg 'goda-pm: the build waits for the running actions'
+    return
+  endif
+  let s:running = {}
   call goda#build(#{name: 'pm', dir: s:config_dir(), bin: s:default_bin()})
   call goda#register('pm', function('s:start'), s:version)
+endfunction
+
+function! s:build_waited(...) abort
+  try
+    call goda_pm#build()
+  catch
+    call goda_pm#util#_error(v:exception)
+  endtry
 endfunction
 
 " Start the binary: goda.vim calls it when a request needs the plugin "pm"
@@ -126,7 +147,13 @@ endfunction
 function! s:call(method, args) abort
   let s:next_id += 1
   let id = s:next_id
-  call call('goda#notify', ['pm', a:method] + a:args + [id])
+  let s:running[id] = 1
+  try
+    call call('goda#notify', ['pm', a:method] + a:args + [id])
+  catch
+    call remove(s:running, id)
+    throw v:exception
+  endtry
   return id
 endfunction
 
@@ -145,6 +172,14 @@ endfunction
 
 " The binary tells the call id is done.
 function! goda_pm#_done(id, result, error) abort
+  if has_key(s:running, a:id)
+    call remove(s:running, a:id)
+  endif
+  if s:build_waits && empty(s:running)
+    " Not in the call of the binary: the build stops it.
+    let s:build_waits = 0
+    call timer_start(0, function('s:build_waited'))
+  endif
   if has_key(s:results, a:id)
     let s:results[a:id] = [a:result, a:error]
   elseif a:error !=# ''
