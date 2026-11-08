@@ -10,7 +10,7 @@
 " The version of this Vim script that the binary goes with (ScriptVersion of
 " its Go side): goda.vim refuses a binary of another one, and says to build
 " it again. Bumped with it when they no longer work together.
-let s:version = #{version: 1, module: 'github.com/Shougo/goda-pm.vim'}
+let s:version = #{version: 2, module: 'github.com/Shougo/goda-pm.vim'}
 
 " The calls that are waited for (goda_pm#_done()), by id.
 let s:results = {}
@@ -317,4 +317,43 @@ endfunction
 function goda_pm#exts() abort
   call s:prepare()
   return goda#request('pm', 'exts')
+endfunction
+
+" Highlight the Vim script and the Lua of the hooks of the TOML file of the
+" buffer: autocmd BufRead *.toml call goda_pm#toml_syntax()
+function goda_pm#toml_syntax() abort
+  if has('nvim') && ':TSBufDisable'->exists()
+    TSBufDisable highlight
+  endif
+
+  syntax clear
+
+  unlet! b:current_syntax
+  runtime! syntax/toml.vim
+
+  unlet! b:current_syntax
+  silent! syntax include @tomlVim syntax/vim.vim
+  syntax region tomlVim matchgroup=tomlString
+        \ start=+\<[[:alnum:]_][[:alnum:]_-]*\s*=\s*\z('''\|"""\)+
+        \ end=+\z1+ contains=@tomlVim keepend
+
+  unlet! b:current_syntax
+  silent! syntax include @tomlLua syntax/lua.vim
+  syntax region tomlLua matchgroup=tomlString
+        \ start=+\<lua_\w*\s*=\s*\z('''\|"""\)+
+        \ end=+\z1+ contains=@tomlLua keepend
+
+  unlet! b:current_syntax
+  silent! syntax include @tomlLuaFtplugin syntax/lua.vim
+  syntax region tomlLuaFtplugin matchgroup=tomlString
+        \ start=+\<\[\%(plugins\.\)\?ftplugin\]\n
+        \\<lua_\w*\s*=\s*\z('''\|"""\)+
+        \ end=+\z1+ contains=@tomlLuaFtplugin keepend
+
+  unlet! b:current_syntax
+  silent! syntax include @tomlVimFtplugin syntax/vim.vim
+  syntax region tomlVimFtplugin matchgroup=tomlString
+        \ start=+\<\[\%(plugins\.\)\?ftplugin\]\n
+        \[[:alnum:]_-]*\s*=\s*\z('''\|"""\)+
+        \ end=+\z1+ contains=@tomlVimFtplugin keepend
 endfunction

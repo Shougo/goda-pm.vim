@@ -92,6 +92,10 @@ function! s:update() abort
   call s:check('help of a merged plugin', s:help('merged.vim'), 'merged.txt')
   call s:check('help of a README', s:help('lazy-func.vim-Usage'), 'README.md')
   call s:check('check_files', goda_pm#check_files(), [])
+  new
+  call goda_pm#toml_syntax()
+  call s:check('toml_syntax', synIDtrans(hlID('tomlVim')) >= 0 && execute('syntax list tomlVim') =~# 'tomlVim', v:true)
+  close
   call s:check('check_clean', goda_pm#check_clean(), [])
   call s:check('get', sort(keys(goda_pm#get())), ['bar.vim', 'dep.vim', 'foo.vim', 'http-plugin',
         \ 'lazy-cmd.vim', 'lazy-event.vim', 'lazy-ft.vim', 'lazy-func.vim', 'local.vim', 'merged.vim',
@@ -136,6 +140,10 @@ function! s:update() abort
   let last = len(log) - 1 - index(reverse(copy(log)), 'Updated plugins:')
   call s:check('updated', log[last + 1 :], ['  foo.vim(1 change)'] + log[last + 2 :])
   call s:check('hook_post_update', get(g:, 'post_update_foo'), 1)
+  " In the directory of the plugin, and back.
+  call s:check('hook directory', fnamemodify(get(g:, 'post_update_cwd', ''), ':t'), 'foo.vim')
+  call s:check('directory back', getcwd() !=# get(g:, 'post_update_cwd', ''), v:true)
+  call s:check('messages', execute('messages') =~# '\[goda-pm\] Updated plugins:', v:true)
   call s:check('rollback', filereadable(s:base . '/' . goda_pm#util#_get_name()
         \ . '/rollbacks/latest/rollback.json'), 1)
   " The documents changed: the state is made again.

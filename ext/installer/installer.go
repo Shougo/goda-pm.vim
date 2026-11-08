@@ -108,6 +108,13 @@ type run struct {
 	params  Params
 	ctx     context.Context
 	logFile string
+
+	// The editor (vim.go).
+	vimOnce     sync.Once
+	isNvim      bool
+	isHeadless  bool
+	progressMu  sync.Mutex
+	progressWin int64
 }
 
 func (e *Ext) newRun(ctx context.Context, a pm.ActionArgs) (*run, error) {
@@ -393,23 +400,6 @@ func (r *run) printError(msg string) {
 	r.log(msg, true)
 }
 
-func (r *run) printMessage(msg string) {
-	_, _ = r.a.Host.Call(r.ctx, "goda_pm#ext#installer#_print_message", msg)
-	r.log(msg, true)
-}
-
-func (r *run) printProgress(msg string) {
-	_, _ = r.a.Host.Call(r.ctx, "goda_pm#ext#installer#_print_progress_message", msg)
-	r.log(msg, false)
-}
-
-func (r *run) callHook(name string, p pm.Plugin, args ...any) {
-	_, err := r.a.Host.Call(r.ctx, "goda_pm#ext#installer#_call_hook", append([]any{name, p}, args...)...)
-	if err != nil {
-		r.printError(fmt.Sprintf("%s: hook_%s: %v", p.Name(), name, err))
-	}
-}
-
 func (r *run) doautocmd(event string) {
 	_ = r.a.Host.Cmd(r.ctx, "if exists('#User#"+event+"') | doautocmd <nomodeline> User "+event+" | endif")
 }
@@ -664,7 +654,7 @@ func (r *run) finalizeUpdate(ups []*updated, failed []pm.Plugin) error {
 	}
 	r.e.failed = failed
 	r.e.mu.Unlock()
-	_, _ = r.a.Host.Call(r.ctx, "goda_pm#ext#installer#_close_progress_window")
+	r.closeProgressWindow()
 	var err error
 	if callMakeState && r.a.MakeState != nil {
 		err = r.a.MakeState(r.ctx)
@@ -790,7 +780,7 @@ func (r *run) checkDiff(u *updated) bool {
 			}
 		}
 		if r.params.CheckDiff && len(output) > 0 {
-			_, _ = r.a.Host.Call(r.ctx, "goda_pm#ext#installer#_output_diff", output)
+			r.outputDiff(output)
 		}
 		if len(output) > 0 {
 			changed = true
@@ -1018,7 +1008,7 @@ func (r *run) checkRemotePlugins(plugins []pm.Plugin) []*updated {
 		r.printUpdated(ups)
 	}
 	r.saveCheckHistories(checked)
-	_, _ = r.a.Host.Call(r.ctx, "goda_pm#ext#installer#_close_progress_window")
+	r.closeProgressWindow()
 	_ = r.a.Host.Cmd(r.ctx, "redraw")
 	r.printMessage("Done: " + time.Now().Format(time.RFC1123))
 	return ups

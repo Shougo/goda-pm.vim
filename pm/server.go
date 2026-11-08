@@ -33,7 +33,7 @@ const PluginName = "pm"
 
 // ScriptVersion is the version of the Vim script the binary goes with
 // (s:version of autoload/goda_pm.vim).
-const ScriptVersion = 1
+const ScriptVersion = 2
 
 // Builder collects the protocols, the exts and the configuration.
 type Builder struct {

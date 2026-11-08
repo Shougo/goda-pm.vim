@@ -271,12 +271,12 @@ goda_pm#build()
 		hook_post_update = 'call goda_pm#build()'
 <
 
-                                                       *goda_pm#ext#toml#syntax()*
-goda_pm#ext#toml#syntax()
+                                                       *goda_pm#toml_syntax()*
+goda_pm#toml_syntax()
 		Highlight the Vim script and the Lua of the hooks of the
 		TOML file of the buffer: >vim
-		autocmd BufRead *.toml call goda_pm#ext#toml#syntax()
-<
+		autocmd BufRead *.toml call goda_pm#toml_syntax()
+<		(It was goda_pm#ext#toml#syntax().)
 The Lua entry: require('goda_pm') has the functions of goda_pm#*(), and
 load_state() is |goda_pm#min#load_state()|: >lua
 	local goda_pm = require('goda_pm')

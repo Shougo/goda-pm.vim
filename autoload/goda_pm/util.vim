@@ -27,6 +27,26 @@ function goda_pm#util#_error(string, name = 'goda-pm') abort
   endif
 endfunction
 
+" A message, as goda_pm#util#_error() (the exts call it: Vim has no function
+" for :echomsg).
+function goda_pm#util#_print_message(msg, name = 'goda-pm') abort
+  const detect_shell = s:is_headless_mode()
+
+  for mes in a:msg->type() ==# v:t_list ? a:msg : a:msg->split('\n')
+    echomsg printf('[%s] %s', a:name, mes)
+
+    if has('nvim') && detect_shell
+      " When it is executed from shell, new line is not added in ":echomsg".
+      echo "\n"
+    endif
+  endfor
+
+  if !has('nvim') && detect_shell
+    " When it is executed from shell, new line is not added in ":echomsg".
+    echo ""
+  endif
+endfunction
+
 function goda_pm#util#_get_plugins(plugins=[]) abort
   return a:plugins->empty() ?
         \ g:goda_pm.state.plugins->values() :
