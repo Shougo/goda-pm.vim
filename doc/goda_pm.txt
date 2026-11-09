@@ -3,7 +3,7 @@
 Author: Shougo <Shougo.Matsu at gmail.com>
 License: MIT license
 
-CONTENTS                                                     *goda-pm-contents*
+CONTENTS                                                    *goda-pm-contents*
 
 Introduction		|goda-pm-introduction|
 Install			|goda-pm-install|
@@ -19,7 +19,7 @@ Writing extensions	|goda-pm-extensions|
 Differences from dpp	|goda-pm-dpp|
 
 ==============================================================================
-INTRODUCTION                                             *goda-pm-introduction*
+INTRODUCTION                                            *goda-pm-introduction*
 
 goda-pm.vim is the successor of dpp.vim on goda.vim: a plugin manager whose
 protocols and exts are Go, in a binary built from your configuration
@@ -33,7 +33,7 @@ update the plugins.
 The TOML files of dpp-ext-toml work as they are.
 
 ==============================================================================
-INSTALL                                                       *goda-pm-install*
+INSTALL                                                      *goda-pm-install*
 
 It needs Vim 9.1 or Neovim 0.11, Go 1.26, git and goda.vim 0.7 or later:
 
@@ -43,7 +43,7 @@ goda.vim is needed only to make the state and to run the exts: it must be in
 'runtimepath' then (a plugin that is not lazy, or added by your vimrc).
 
 ==============================================================================
-CONFIGURATION                                           *goda-pm-configuration*
+CONFIGURATION                                          *goda-pm-configuration*
 
 The configuration is a Go module in |g:goda_pm#config_dir|: a main.go that
 adds the protocols and the exts (|goda-pm-exts|), and gives the plugins
@@ -67,9 +67,15 @@ adds the protocols and the exts (|goda-pm-exts|), and gives the plugins
 		b.Main()
 	}
 
-	func config(ctx context.Context, c *pm.ConfigArgs) (*pm.ConfigReturn, error) {
+	func config(ctx context.Context, c *pm.ConfigArgs) (
+			*pm.ConfigReturn, error) {
 		c.Options.InlineVimrcs = []string{"$BASE_DIR/options.rc.vim"}
-		t, err := toml.Load(ctx, c.Host, "$BASE_DIR/dpp.toml", pm.Plugin{"lazy": false})
+		t, err := toml.Load(
+			ctx,
+			c.Host,
+			"$BASE_DIR/dpp.toml",
+			pm.Plugin{"lazy": false},
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -95,24 +101,24 @@ MultipleHooks and StateLines, as dpp.vim's.
 |goda_pm#make_state()| builds the configuration when it is newer than the
 binary; |goda_pm#build()| builds it.
 
-g:goda_pm#config_dir                                     *g:goda_pm#config_dir*
+g:goda_pm#config_dir                                    *g:goda_pm#config_dir*
 		The configuration module.
 		Default: "~/.vim/goda-pm", Neovim: stdpath('config') .
 		'/goda-pm'
 
-g:goda_pm#binary                                             *g:goda_pm#binary*
+g:goda_pm#binary                                            *g:goda_pm#binary*
 		The binary.  When it is set, it is yours to build: it is not
 		built.
 		Default: goda-pm in the cache directory ("~/.cache/vim/goda-pm",
 		Neovim: stdpath('cache') . '/goda-pm')
 
 ==============================================================================
-STARTUP                                                       *goda-pm-startup*
+STARTUP                                                      *goda-pm-startup*
 
 Clone goda-pm.vim, goda.vim and goda-pm-ext-lazy.vim where the protocol git
 puts them (list them in your TOML files too, not lazy, and they are updated
-as the others): >sh
-
+as the others):
+>sh
 	git clone https://github.com/Shougo/goda-pm.vim \
 	  ~/.cache/goda-pm/repos/github.com/Shougo/goda-pm.vim
 	git clone https://github.com/Shougo/goda.vim \
@@ -120,8 +126,8 @@ as the others): >sh
 	git clone https://github.com/Shougo/goda-pm-ext-lazy.vim \
 	  ~/.cache/goda-pm/repos/github.com/Shougo/goda-pm-ext-lazy.vim
 <
-The vimrc, as dpp.vim's: >vim
-
+The vimrc, as dpp.vim's:
+>vim
 	" goda-pm.vim must be in 'runtimepath'.
 	set runtimepath^=~/.cache/goda-pm/repos/github.com/Shougo/goda-pm.vim
 
@@ -142,12 +148,12 @@ The vimrc, as dpp.vim's: >vim
 	filetype plugin indent on
 	syntax on
 <
-After the state is made, restart Vim, and install the plugins: >vim
-
+After the state is made, restart Vim, and install the plugins:
+>vim
 	call goda_pm#async_ext_action('installer', 'install')
 <
-The state is made again when the files it was made from change: >vim
-
+The state is made again when the files it was made from change:
+>vim
 	autocmd BufWritePost *.toml,*.vim,*.go
 	      \ : if !goda_pm#check_files()->empty()
 	      \ |   call goda_pm#make_state()
@@ -157,49 +163,50 @@ The state sets |g:goda#workspace| of goda.vim to the directories of the
 plugins that are Go modules: |goda#build()| (the build() of the goda.vim
 plugins) builds their binaries with the plugins installed (and those of a
 local directory), not with the versions their configurations require.
-After an update, build them again, with no "go get -u": >toml
+After an update, build them again, with no "go get -u":
+>toml
 	[[plugins]]
 	repo = 'Shougo/goda-fi.vim'
 	hook_post_update = 'call goda_fi#build()'
 <
 ==============================================================================
-OPTIONS                                                       *goda-pm-options*
+OPTIONS                                                      *goda-pm-options*
 
 The configuration sets them (c.Options, of pm.Options).
 
-                                                  *goda-pm-option-extParams*
+                                                    *goda-pm-option-extParams*
 ExtParams	(map[string]pm.Params)
 		The params of the exts, by name.
 		Default: {}
 
-                                            *goda-pm-option-hooksFileMarker*
+                                              *goda-pm-option-hooksFileMarker*
 HooksFileMarker	(string)
 		The start and the end of a hook in a hooks file.
 		Default: "{{{,}}}"
 
-                                               *goda-pm-option-inlineVimrcs*
+                                                 *goda-pm-option-inlineVimrcs*
 InlineVimrcs	(string list)
 		Vim script files (or Lua files: .lua) put in the startup
 		script.
 		Default: []
 
-                                             *goda-pm-option-protocolParams*
+                                               *goda-pm-option-protocolParams*
 ProtocolParams	(map[string]pm.Params)
 		The params of the protocols, by name.
 		Default: {}
 
-                                                  *goda-pm-option-protocols*
+                                                    *goda-pm-option-protocols*
 Protocols	(string list)
 		The protocols that detect the plugins, in order.
 		Default: all the protocols added, in the order they were
 
-                                   *goda-pm-option-skipMergeFilenamePattern*
+                                     *goda-pm-option-skipMergeFilenamePattern*
 SkipMergeFilenamePattern	(string)
 		The files (a Go regexp) that are not merged.
 		Default: '^tags(?:-\w\w)?$|^package\.json$|\.md$'
 
 ==============================================================================
-PLUGIN OPTIONS                                         *goda-pm-plugin-options*
+PLUGIN OPTIONS                                        *goda-pm-plugin-options*
 
 Those of dpp.vim, in the TOML files or in pm.Plugin: augroup, depends,
 description, extAttrs, external_commands, ftplugin, group, hook_add,
@@ -208,20 +215,19 @@ hook_post_source, hook_post_update, hook_pre_update, hook_source,
 hooks_file, if, lazy, local, lua_add, lua_source, ... (lua_*),
 merge_ftdetect, merged, name, on_cmd, on_event, on_func, on_if, on_lua,
 on_map, on_path, on_post_source, on_root, on_source, path, priority,
-protocol, protocolAttrs, repo, rev, rtp, script_type.  See |dpp-plugin-option|
-for what they are, if you have dpp.vim's documents.
+protocol, protocolAttrs, repo, rev, rtp, script_type.
 
 ==============================================================================
 FUNCTIONS                                                   *goda-pm-functions*
 
-                                                   *goda_pm#min#load_state()*
+                                                    *goda_pm#min#load_state()*
 goda_pm#min#load_state({base-path}[, {name}])
 		Load the state of {name} (|v:progname| without its extension
 		by default: vim or nvim) in {base-path}.  It returns 1 when
 		there is none, or it cannot be loaded: then make it with
 		|goda_pm#make_state()|.
 
-                                                      *goda_pm#make_state()*
+                                                        *goda_pm#make_state()*
 goda_pm#make_state([{base-path}[, {name}[, {extra-args}]]])
 		Make the state in the background: the configuration runs.
 		|GodaPm:makeStatePost| is done after it.  It builds the
@@ -229,55 +235,56 @@ goda_pm#make_state([{base-path}[, {name}[, {extra-args}]]])
 		{base-path} is that of |goda_pm#min#load_state()| by default.
 		{extra-args} is ConfigArgs.ExtraArgs.
 
-                                                 *goda_pm#make_state_sync()*
+                                                   *goda_pm#make_state_sync()*
 goda_pm#make_state_sync([{base-path}[, {name}[, {extra-args}]]])
 		As |goda_pm#make_state()|, and wait for it.
 
-                                                     *goda_pm#clear_state()*
+                                                       *goda_pm#clear_state()*
 goda_pm#clear_state([{name}])
 		Remove the state.
 
-                                                     *goda_pm#check_files()*
+                                                       *goda_pm#check_files()*
 goda_pm#check_files([{base-path}[, {name}]])
 		The files of the state (CheckFiles, the inline vimrcs, the
 		hooks files and the configuration) that are newer than it.
 
-                                                     *goda_pm#check_clean()*
+                                                       *goda_pm#check_clean()*
 goda_pm#check_clean()
 		The directories of the plugins in {base-path}/repos that are
 		not in the state.
 
-                                                             *goda_pm#get()*
+                                                               *goda_pm#get()*
 goda_pm#get([{name}])
 		The plugin {name}, or all of them.
 
-                                                          *goda_pm#source()*
+                                                            *goda_pm#source()*
 goda_pm#source([{plugins}[, {function-prefix}]])
 		Load the plugins (names or dictionaries), or all of them.
 
-                                                *goda_pm#sync_ext_action()*
+                                                   *goda_pm#sync_ext_action()*
 goda_pm#sync_ext_action({ext}, {action}[, {params}])
 		Run the action of the ext, and give its result.  Long ones
 		(install, update) can be run so in a script: >sh
 		vim -N -u ~/.vimrc -c "call goda_pm#sync_ext_action(
 		  \ 'installer', 'update')" -c 'qall!'
 <
-                                               *goda_pm#async_ext_action()*
+                                                  *goda_pm#async_ext_action()*
 goda_pm#async_ext_action({ext}, {action}[, {params}])
 		Run the action of the ext in the background.
 
-                                                            *goda_pm#exts()*
+                                                              *goda_pm#exts()*
 goda_pm#exts()
 		The exts of the binary and their actions: {ext: [action]}.
 
-                                                           *goda_pm#build()*
+                                                             *goda_pm#build()*
 goda_pm#build()
 		Build the configuration into |g:goda_pm#binary|, with
 		|goda#build()| of goda.vim.  The running binary is stopped,
 		and the new one starts with the next request.
 		While the binary runs an action or makes the state, the
 		build waits for them: hook_post_update of goda-pm.vim can
-		call it. >toml
+		call it.
+>toml
 		[[plugins]]
 		repo = 'Shougo/goda-pm.vim'
 		hook_post_update = 'call goda_pm#build()'
@@ -290,39 +297,40 @@ goda_pm#toml_syntax()
 		autocmd BufRead *.toml call goda_pm#toml_syntax()
 <		(It was goda_pm#ext#toml#syntax().)
 The Lua entry: require('goda_pm') has the functions of goda_pm#*(), and
-load_state() is |goda_pm#min#load_state()|: >lua
+load_state() is |goda_pm#min#load_state()|:
+>lua
 	local goda_pm = require('goda_pm')
 	if goda_pm.load_state(base) then
 	  goda_pm.make_state(base)
 	end
 <
 ==============================================================================
-VARIABLES                                                   *goda-pm-variables*
+VARIABLES                                                  *goda-pm-variables*
 
-g:goda_pm                                                           *g:goda_pm*
+g:goda_pm                                                          *g:goda_pm*
 		The state: g:goda_pm.state.plugins are the plugins, by name.
 
-g:goda_pm#hook_args                                       *g:goda_pm#hook_args*
+g:goda_pm#hook_args                                      *g:goda_pm#hook_args*
 		The arguments of the hook that runs.
 
-g:goda_pm#hook_result                                   *g:goda_pm#hook_result*
+g:goda_pm#hook_result                                  *g:goda_pm#hook_result*
 		What the hook gives back: hook_post_check_update skips the
 		update of the plugin when it sets it.
 
 ==============================================================================
-AUTOCMDS                                                     *goda-pm-autocmds*
+AUTOCMDS                                                    *goda-pm-autocmds*
 
 GodaPm:makeStatePost                                    *GodaPm:makeStatePost*
 		After the state is made.
 
-GodaPm:extActionPost:{ext}:{action}     *GodaPm:extActionPost*
+GodaPm:extActionPost:{ext}:{action}                     *GodaPm:extActionPost*
 		After the action of the ext.
 
 GodaPm:ext:installer:updateDone              *GodaPm:ext:installer:updateDone*
 		After the installer installed or updated plugins.
 
 ==============================================================================
-PROTOCOLS AND EXTS                                               *goda-pm-exts*
+PROTOCOLS AND EXTS                                              *goda-pm-exts*
 
 The protocols and the exts are in repositories of their own: add them in the
 configuration (|goda-pm-configuration|).
@@ -343,14 +351,14 @@ goda-pm-ext-lazy.vim
 		|goda-pm-startup|).  |goda-pm-ext-lazy|
 
 ==============================================================================
-WRITING EXTENSIONS                                         *goda-pm-extensions*
+WRITING EXTENSIONS                                        *goda-pm-extensions*
 
 A protocol implements pm.Protocol (embed pm.BaseProtocol for the methods
 it does not need), and an ext pm.Ext: its actions get the options of the
 state, the protocols and the editor.
 
 ==============================================================================
-DIFFERENCES FROM DPP                                              *goda-pm-dpp*
+DIFFERENCES FROM DPP                                             *goda-pm-dpp*
 
 - The configuration is Go (main.go), not TypeScript, and there is no Deno:
   the protocols and the exts are Go packages compiled into the binary.
