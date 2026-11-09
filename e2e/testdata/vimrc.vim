@@ -14,6 +14,7 @@ let s:phase = $GODA_PM_PHASE
 
 execute 'set runtimepath^=' . fnameescape($GODA_VIM_DIR)
 execute 'set runtimepath^=' . fnameescape($GODA_PM_DIR)
+execute 'set runtimepath^=' . fnameescape($GODA_PM_EXT_LAZY_DIR)
 let g:goda_pm#binary = $GODA_PM_BINARY
 let g:goda_pm#config_dir = $GODA_PM_CONFIG_DIR
 let s:base = $GODA_PM_BASE

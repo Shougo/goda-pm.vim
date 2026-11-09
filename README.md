@@ -8,14 +8,15 @@ instead of TypeScript, and no Deno.
 - The startup does not use the binary: as dpp.vim, goda-pm writes a state
   (a startup script and the plugins) once, and `goda_pm#min#load_state()`
   sources it.
-- The TOML files of dpp-ext-toml work as they are (`ext/toml`).
-- The protocols `git` and `http` (dpp-protocol-git, dpp-protocol-http; http
-  needs no curl, unzip nor tar).
-- The ext `installer` (dpp-ext-installer), and the lazy loading
-  (dpp-ext-lazy, `ext/lazy`) and the local plugins (dpp-ext-local,
-  `ext/local`).
-- The source `goda_pm` of [goda-fi.vim](https://github.com/Shougo/goda-fi.vim)
-  (ddu-source-dpp), in `ext/fi/pmfi`.
+- The protocols and the exts are in repositories of their own:
+  [goda-pm-ext](https://github.com/Shougo/goda-pm-ext) (Go packages): the
+  protocols `git` and `http` (dpp-protocol-git, dpp-protocol-http; http
+  needs no curl, unzip nor tar), the ext `installer` (dpp-ext-installer),
+  the TOML files of dpp-ext-toml (they work as they are), the local plugins
+  (dpp-ext-local) and the source `goda_pm` of
+  [goda-fi.vim](https://github.com/Shougo/goda-fi.vim) (ddu-source-dpp);
+  [goda-pm-ext-lazy.vim](https://github.com/Shougo/goda-pm-ext-lazy.vim):
+  the lazy loading (dpp-ext-lazy).
 - A Lua entry: `require('goda_pm')`.
 - The binaries of the goda.vim plugins are built with the plugins installed
   (`g:goda#workspace` of goda.vim): after an update, build them again, with no
@@ -36,6 +37,14 @@ The configuration is a Go module (see [examples/config](examples/config)) in
 protocols and the exts, and gives the plugins.
 
 ```go
+import (
+	"github.com/Shougo/goda-pm-ext-lazy.vim/ext/lazy"
+	"github.com/Shougo/goda-pm-ext/ext/installer"
+	"github.com/Shougo/goda-pm-ext/ext/protocol/git"
+	"github.com/Shougo/goda-pm-ext/ext/toml"
+	"github.com/Shougo/goda-pm.vim/pm"
+)
+
 func main() {
 	b := pm.New()
 	b.AddProtocol(git.New())
@@ -55,12 +64,14 @@ func main() {
 }
 ```
 
-Clone goda-pm.vim and goda.vim where the protocol `git` puts them (list them
-in your TOML files too, and they are updated as the others):
+Clone goda-pm.vim, goda.vim and goda-pm-ext-lazy.vim where the protocol `git`
+puts them (list them in your TOML files too, not lazy, and they are updated
+as the others):
 
 ```sh
 git clone https://github.com/Shougo/goda-pm.vim ~/.cache/goda-pm/repos/github.com/Shougo/goda-pm.vim
 git clone https://github.com/Shougo/goda.vim ~/.cache/goda-pm/repos/github.com/Shougo/goda.vim
+git clone https://github.com/Shougo/goda-pm-ext-lazy.vim ~/.cache/goda-pm/repos/github.com/Shougo/goda-pm-ext-lazy.vim
 ```
 
 In your vimrc:
@@ -73,8 +84,9 @@ const s:base = '~/.cache/goda-pm'
 let $BASE_DIR = '<script>:h'->expand()
 
 if s:base->goda_pm#min#load_state()
-  " No state: goda.vim is needed to make it.
+  " No state: goda.vim and goda-pm-ext-lazy.vim are needed to make it.
   set runtimepath^=~/.cache/goda-pm/repos/github.com/Shougo/goda.vim
+  set runtimepath^=~/.cache/goda-pm/repos/github.com/Shougo/goda-pm-ext-lazy.vim
   autocmd VimEnter * ++once call goda_pm#make_state(s:base)
 endif
 

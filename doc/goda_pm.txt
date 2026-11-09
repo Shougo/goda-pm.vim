@@ -14,9 +14,7 @@ Plugin options		|goda-pm-plugin-options|
 Functions		|goda-pm-functions|
 Variables		|goda-pm-variables|
 Autocmds		|goda-pm-autocmds|
-Protocols		|goda-pm-protocols|
-Exts			|goda-pm-exts|
-Goda-fi source		|goda-pm-goda-fi|
+Protocols and exts	|goda-pm-exts|
 Writing extensions	|goda-pm-extensions|
 Differences from dpp	|goda-pm-dpp|
 
@@ -48,9 +46,18 @@ goda.vim is needed only to make the state and to run the exts: it must be in
 CONFIGURATION                                           *goda-pm-configuration*
 
 The configuration is a Go module in |g:goda_pm#config_dir|: a main.go that
-adds the protocols and the exts, and gives the plugins (examples/config has
-one, which loads TOML files and the plugins of ~/work):
+adds the protocols and the exts (|goda-pm-exts|), and gives the plugins
+(examples/config has one, which loads TOML files and the plugins of ~/work):
 >go
+	import (
+		"github.com/Shougo/goda-pm-ext-lazy.vim/ext/lazy"
+		"github.com/Shougo/goda-pm-ext/ext/installer"
+		"github.com/Shougo/goda-pm-ext/ext/protocol/git"
+		"github.com/Shougo/goda-pm-ext/ext/protocol/http"
+		"github.com/Shougo/goda-pm-ext/ext/toml"
+		"github.com/Shougo/goda-pm.vim/pm"
+	)
+
 	func main() {
 		b := pm.New()
 		b.AddProtocol(git.New())
@@ -102,13 +109,16 @@ g:goda_pm#binary                                             *g:goda_pm#binary*
 ==============================================================================
 STARTUP                                                       *goda-pm-startup*
 
-Clone goda-pm.vim and goda.vim where the protocol git puts them (list them in
-your TOML files too, and they are updated as the others): >sh
+Clone goda-pm.vim, goda.vim and goda-pm-ext-lazy.vim where the protocol git
+puts them (list them in your TOML files too, not lazy, and they are updated
+as the others): >sh
 
 	git clone https://github.com/Shougo/goda-pm.vim \
 	  ~/.cache/goda-pm/repos/github.com/Shougo/goda-pm.vim
 	git clone https://github.com/Shougo/goda.vim \
 	  ~/.cache/goda-pm/repos/github.com/Shougo/goda.vim
+	git clone https://github.com/Shougo/goda-pm-ext-lazy.vim \
+	  ~/.cache/goda-pm/repos/github.com/Shougo/goda-pm-ext-lazy.vim
 <
 The vimrc, as dpp.vim's: >vim
 
@@ -119,8 +129,10 @@ The vimrc, as dpp.vim's: >vim
 	let $BASE_DIR = '<script>:h'->expand()
 
 	if s:base->goda_pm#min#load_state()
-	  " No state (or it is old): goda.vim is needed to make it.
+	  " No state (or it is old): goda.vim and goda-pm-ext-lazy.vim are
+	  " needed to make it.
 	  set runtimepath^=~/.cache/goda-pm/repos/github.com/Shougo/goda.vim
+	  set runtimepath^=~/.cache/goda-pm/repos/github.com/Shougo/goda-pm-ext-lazy.vim
 	  autocmd VimEnter * ++once call goda_pm#make_state(s:base)
 	endif
 
@@ -310,65 +322,26 @@ GodaPm:ext:installer:updateDone              *GodaPm:ext:installer:updateDone*
 		After the installer installed or updated plugins.
 
 ==============================================================================
-PROTOCOLS                                                   *goda-pm-protocols*
+PROTOCOLS AND EXTS                                               *goda-pm-exts*
 
-                                                         *goda-pm-protocol-git*
-git		ext/protocol/git: git repositories, as dpp-protocol-git.
-		"user/name" is a repository of the hub site (GitHub); an
-		absolute path to a repository is a local plugin.  The plugins
-		go in {base-path}/repos/{host}/{user}/{name}.
-		Params (protocolParams.git): cloneDepth, commandPath,
-		defaultHubSite, defaultProtocol, defaultRemote,
-		enableCredentialHelper, enablePartialClone, enableSSLVerify,
-		pullArgs.
-		Plugin attrs (protocolAttrs): gitDefaultBranch, gitRemote.
+The protocols and the exts are in repositories of their own: add them in the
+configuration (|goda-pm-configuration|).
 
-                                                        *goda-pm-protocol-http*
-http		ext/protocol/http: a file or an archive (zip, tar.gz,
-		tar.bz2) on the web, as dpp-protocol-http: "rev" is the SHA-1
-		of what is downloaded.  goda-pm downloads and extracts it
-		itself (no curl, unzip nor tar is needed).
+goda-pm-ext	https://github.com/Shougo/goda-pm-ext
+		Go packages (not a Vim plugin): the protocols git
+		(ext/protocol/git, dpp-protocol-git) and http
+		(ext/protocol/http, dpp-protocol-http), the ext installer
+		(ext/installer, dpp-ext-installer), toml.Load() (ext/toml,
+		dpp-ext-toml), local.Load() (ext/local, dpp-ext-local) and
+		the source "goda_pm" of goda-fi.vim (ext/fi/pmfi,
+		ddu-source-dpp).  Its README has their params.
 
-==============================================================================
-EXTS                                                             *goda-pm-exts*
+goda-pm-ext-lazy.vim
+		https://github.com/Shougo/goda-pm-ext-lazy.vim
+		lazy.MakeState() (ext/lazy, dpp-ext-lazy): the lazy loading.
+		It has Vim script: it must be in 'runtimepath' (see
+		|goda-pm-startup|).  |goda-pm-ext-lazy|
 
-                                                     *goda-pm-ext-installer*
-installer	ext/installer: it installs, updates and builds the plugins,
-		as dpp-ext-installer.
-		Actions: build, checkNotUpdated, denoCache, getFailed,
-		getLogs, getNotInstalled, getNotUpdated, getUpdateLogs,
-		getUpdated, install, reinstall, update.  The params of
-		install, reinstall and update: names (the plugins, all by
-		default) and rollback (the date of a rollback file, or
-		"latest"); of checkNotUpdated: names and force (update
-		without asking).
-		Params (extParams.installer): checkDiff, checkExts,
-		logFilePath, maxInactiveDays, maxProcesses, minCommitDays,
-		wait.
-		Plugin attrs (extAttrs): installerBuild, installerFrozen,
-		installerMaxInactiveDays, installerMinCommitDays.
-
-These are not exts with actions, but Go functions of the configuration:
-
-                                                          *goda-pm-ext-toml*
-toml		ext/toml: toml.Load() loads a TOML file of dpp-ext-toml.
-
-                                                         *goda-pm-ext-local*
-local		ext/local: local.Load() gives the plugins of a directory
-		(those you develop), as dpp-ext-local.
-
-                                                          *goda-pm-ext-lazy*
-lazy		ext/lazy: lazy.MakeState() gives the lazy loading of the
-		plugins (on_*), as dpp-ext-lazy.
-
-==============================================================================
-GODA-FI SOURCE                                                *goda-pm-goda-fi*
-
-ext/fi/pmfi is the source "goda_pm" of goda-fi.vim, as ddu-source-dpp: the
-plugins, as items of the kind "file", with the actions "browse" and
-"update".  Add it in your configuration of goda-fi: >go
-	b.AddSource(pmfi.New())
-<
 ==============================================================================
 WRITING EXTENSIONS                                         *goda-pm-extensions*
 

@@ -2,6 +2,9 @@
 // testdata/vimrc.vim, with the binary of testbin, installs plugins from git
 // repositories of a temporary directory and from an HTTP server, starts
 // with the state, and updates them.
+//
+// It is a module of its own, with the exts (goda-pm-ext and
+// goda-pm-ext-lazy.vim), which require goda-pm.vim: this one replaces it.
 package e2e
 
 import (
@@ -10,6 +13,7 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -233,34 +237,29 @@ hook_source = 'let g:multiple_source = 1'
 	if out, err := exec.Command("go", "build", "-o", bin, "./testbin").CombinedOutput(); err != nil {
 		t.Fatalf("go build: %v\n%s", err, out)
 	}
-	out, err := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", "github.com/Shougo/goda.vim").Output()
-	if err != nil {
-		t.Fatalf("go list: %v", err)
-	}
 	root, err := filepath.Abs("..")
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The configuration goda_pm#build() builds: testbin, with this
-	// goda-pm.vim.
+	// The configuration goda_pm#build() builds: testbin, with the modules
+	// of this one (and this goda-pm.vim).
 	cfg := filepath.Join(dir, "config")
 	main, err := os.ReadFile(filepath.Join("testbin", "main.go"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	goSum, err := os.ReadFile(filepath.Join("..", "go.sum"))
+	goSum, err := os.ReadFile("go.sum")
 	if err != nil {
 		t.Fatal(err)
 	}
 	write(t, filepath.Join(cfg, "main.go"), string(main))
 	write(t, filepath.Join(cfg, "go.sum"), string(goSum))
-	write(t, filepath.Join(cfg, "go.mod"), fmt.Sprintf("module goda-pm-e2e-config\n\ngo 1.26.0\n\n"+
-		"require github.com/Shougo/goda-pm.vim v0.1.0\n\nreplace github.com/Shougo/goda-pm.vim => %s\n",
-		filepath.ToSlash(root)))
+	write(t, filepath.Join(cfg, "go.mod"), configGoMod(t))
 	e.vars = append(e.vars,
 		"GODA_PM_CONFIG_DIR="+cfg,
-		"GODA_VIM_DIR="+strings.TrimSpace(string(out)),
+		"GODA_VIM_DIR="+moduleDir(t, "github.com/Shougo/goda.vim"),
 		"GODA_PM_DIR="+root,
+		"GODA_PM_EXT_LAZY_DIR="+moduleDir(t, "github.com/Shougo/goda-pm-ext-lazy.vim"),
 		"GODA_PM_BINARY="+bin,
 		"GODA_PM_FILES="+files,
 		"GODA_PM_LOCAL="+local,
@@ -268,6 +267,56 @@ hook_source = 'let g:multiple_source = 1'
 		"GODA_PM_RESULT="+filepath.Join(dir, "result"),
 	)
 	return e
+}
+
+// moduleDir is the directory of the module path this module requires.
+func moduleDir(t *testing.T, path string) string {
+	t.Helper()
+	out, err := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", path).Output()
+	if err != nil {
+		t.Fatalf("go list %s: %v", path, err)
+	}
+	return strings.TrimSpace(string(out))
+}
+
+// configGoMod is the go.mod of the configuration: the requirements and the
+// replacements of this module (with absolute paths).
+func configGoMod(t *testing.T) string {
+	t.Helper()
+	out, err := exec.Command("go", "mod", "edit", "-json").Output()
+	if err != nil {
+		t.Fatalf("go mod edit: %v", err)
+	}
+	var m struct {
+		Go      string
+		Require []struct{ Path, Version string }
+		Replace []struct {
+			Old struct{ Path string }
+			New struct{ Path, Version string }
+		}
+	}
+	if err := json.Unmarshal(out, &m); err != nil {
+		t.Fatal(err)
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "module goda-pm-e2e-config\n\ngo %s\n\n", m.Go)
+	for _, r := range m.Require {
+		fmt.Fprintf(&b, "require %s %s\n", r.Path, r.Version)
+	}
+	for _, r := range m.Replace {
+		to := r.New.Path
+		if r.New.Version != "" {
+			to += " " + r.New.Version
+		} else if !filepath.IsAbs(to) {
+			abs, err := filepath.Abs(to)
+			if err != nil {
+				t.Fatal(err)
+			}
+			to = filepath.ToSlash(abs)
+		}
+		fmt.Fprintf(&b, "replace %s => %s\n", r.Old.Path, to)
+	}
+	return b.String()
 }
 
 // run runs the phase of the scenario in the editor.
