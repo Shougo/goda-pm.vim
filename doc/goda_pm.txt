@@ -11,6 +11,8 @@ Configuration		|goda-pm-configuration|
 Startup			|goda-pm-startup|
 Options			|goda-pm-options|
 Plugin options		|goda-pm-plugin-options|
+  Hooks			|goda-pm-hooks|
+  Merged plugins	|goda-pm-merge|
 Functions		|goda-pm-functions|
 Variables		|goda-pm-variables|
 Autocmds		|goda-pm-autocmds|
@@ -176,23 +178,30 @@ The configuration sets them (c.Options, of pm.Options).
 
                                                     *goda-pm-option-extParams*
 ExtParams	(map[string]pm.Params)
-		The params of the exts, by name.
+		It is a dictionary that maps ext names to its parameters.
+		See also |goda-pm-ext-attrs| and the documentation of the
+		ext.
 		Default: {}
 
                                               *goda-pm-option-hooksFileMarker*
 HooksFileMarker	(string)
-		The start and the end of a hook in a hooks file.
+		The marker is used in |goda-pm-plugin-option-hooks_file|:
+		the start and the end of a hook.
 		Default: "{{{,}}}"
 
                                                  *goda-pm-option-inlineVimrcs*
 InlineVimrcs	(string list)
-		Vim script files (or Lua files: .lua) put in the startup
-		script.
+		The vimrcs are sourced in |goda_pm#min#load_state()| before
+		hooks: they are put in the startup script.
+		NOTE: The files must not be included "<<" pattern (here
+		document).  It breaks the parser.
+		NOTE: It also supports ".lua" file for Neovim.
 		Default: []
 
                                                *goda-pm-option-protocolParams*
 ProtocolParams	(map[string]pm.Params)
-		The params of the protocols, by name.
+		It is a dictionary that maps protocol names to its
+		parameters.  See also the documentation of the protocol.
 		Default: {}
 
                                                     *goda-pm-option-protocols*
@@ -202,23 +211,433 @@ Protocols	(string list)
 
                                      *goda-pm-option-skipMergeFilenamePattern*
 SkipMergeFilenamePattern	(string)
-		The files (a Go regexp) that are not merged.
+		It is the pattern of skip filename when
+		|goda-pm-plugin-option-merged| is set (|goda-pm-merge|).
+		NOTE: It must be Go regexp.
+		NOTE: It is only effective for files directly under the
+		directory.
 		Default: '^tags(?:-\w\w)?$|^package\.json$|\.md$'
 
 ==============================================================================
 PLUGIN OPTIONS                                        *goda-pm-plugin-options*
 
-Those of dpp.vim, in the TOML files or in pm.Plugin: augroup, depends,
-description, extAttrs, external_commands, ftplugin, group, hook_add,
-hook_depends_update, hook_done_update, hook_post_check_update,
-hook_post_source, hook_post_update, hook_pre_update, hook_source,
-hooks_file, if, lazy, local, lua_add, lua_source, ... (lua_*),
-merge_ftdetect, merged, name, on_cmd, on_event, on_func, on_if, on_lua,
-on_map, on_path, on_post_source, on_root, on_source, path, priority,
-protocol, protocolAttrs, repo, rev, rtp, script_type.
+		The plugin options are those of dpp.vim: the keys of a plugin
+		in the TOML files (toml.Load() of goda-pm-ext), or of
+		pm.Plugin in the configuration.  It accepts the following
+		keys:
+
+                                               *goda-pm-plugin-option-augroup*
+augroup		(string)
+		An augroup name that the plugin uses for |VimEnter| or
+		|GUIEnter| autocmd events.
+
+                                               *goda-pm-plugin-option-depends*
+depends		(list or string)
+		Specify a list of plugins a plugin depends on.
+		List items are '{plugin-name}'.
+		Those specified in the list are NOT installed automatically.
+		NOTE: The loading order is not guaranteed in non-lazy plugins.
+
+                                           *goda-pm-plugin-option-description*
+description	(string)
+		Describe the plugin.
+
+                                              *goda-pm-plugin-option-extAttrs*
+extAttrs	(dictionary)
+		It is a dictionary that exts specific attributes.
+		See also |goda-pm-ext-attrs|.
+
+                                     *goda-pm-plugin-option-external_commands*
+external_commands (list) or (string)
+		It is external commands dependency.
+		If the commands are not |executable()|, the plugin is ignored.
+
+                                              *goda-pm-plugin-option-ftplugin*
+ftplugin	(dictionary)
+		"_" key is executed after all ftplugin.
+		"{filetype}" key is executed {filetype} ftplugin.
+		"lua_{filetype}" key is executed {filetype} ftplugin as
+		|:lua|.
+		You can define multiple filetypes by "{filetype1}_{filetype2}"
+		key.  "b:undo_ftplugin" is defined automatically.
+		NOTE: The state must be made again after it is changed (see
+		|goda_pm#check_files()|).
+		NOTE: It is not executed when the plugin is not installed.
+
+                                                 *goda-pm-plugin-option-group*
+group		(list) or (string)
+		It is group name.
+
+                                                    *goda-pm-plugin-option-if*
+if		(bool) or (string)
+		If set to |v:false|, goda-pm doesn't load the plugin.
+		If it is |String|, goda-pm will eval it.
+		If you don't set it, goda-pm will register (enable) the
+		plugin.
+		NOTE: You cannot disable plugins register in goda-pm if you
+		use the option.
+
+                                                  *goda-pm-plugin-option-lazy*
+lazy		(bool)
+		If set to v:true, goda-pm doesn't add the path to
+		'runtimepath' automatically.
+		If you don't set it, goda-pm will set it automatically when
+		the conditions are met.
+		NOTE: You should not specify the plugins which have no
+		"plugin/" directory as lazy load plugins.  It is meaningless
+		and just increases the overhead.
+		NOTE: To load lazy plugins, you need goda-pm-ext-lazy.vim
+		(|goda-pm-exts|).
+
+                                                 *goda-pm-plugin-option-local*
+local		(bool)
+		If set to v:true, it is local installed plugin.
+
+                                                *goda-pm-plugin-option-merged*
+merged		(bool)
+		If set to v:false, goda-pm doesn't merge the plugin
+		directory.
+		It is useful for the plugin files conflicts.
+
+		Default: See |goda-pm-merge|.
+
+                                        *goda-pm-plugin-option-merge_ftdetect*
+merge_ftdetect	(bool)
+		If set to v:true, goda-pm merge the plugin "ftdetect"
+		directory.
+		It is useful to enable file detection when lazy loaded plugin.
+		NOTE: It does not work if ftdetect script depends on lazy
+		plugin functions.
+
+                                                  *goda-pm-plugin-option-name*
+name		(string)
+		Specify the name of the plugin.  This is used for goda-pm
+		management and other functions.  If it is omitted, the tail of
+		the repository name will be used.
+		NOTE: Must be unique across the all plugin.  If the repo tail
+		is bound to conflict, you can set the "name" option manually
+		to prevent overwriting an existing plugin setting.
+
+                                                *goda-pm-plugin-option-on_cmd*
+on_cmd		(list) or (string)
+		If it matches the executed command name, goda-pm will call
+		|goda_pm#source()|.
+		NOTE: It must be unique.
+		NOTE: To use the feature, you need goda-pm-ext-lazy.vim.
+
+                                              *goda-pm-plugin-option-on_event*
+on_event	(string) or (list)
+		goda-pm will call |goda_pm#source()| on the events.
+		NOTE: To use the feature, you need goda-pm-ext-lazy.vim.
+
+                                               *goda-pm-plugin-option-on_func*
+on_func		(list) or (string)
+		If it matches the called undefined function name, goda-pm
+		will call |goda_pm#source()|.
+		NOTE: It does not work when Vim initialized.
+		NOTE: It does not work for Vim9 script.  It is
+		|FuncUndefined| limitation.
+		NOTE: To use the feature, you need goda-pm-ext-lazy.vim.
+
+                                                 *goda-pm-plugin-option-on_ft*
+on_ft		(list) or (string)
+		If it matches 'filetype', goda-pm will call
+		|goda_pm#source()|.
+		NOTE: To use the feature, you need goda-pm-ext-lazy.vim.
+
+                                                 *goda-pm-plugin-option-on_if*
+on_if		(string)
+		If it evaluates to a non-zero value, goda-pm will call
+		|goda_pm#source()|.
+		The default evaluate timings are "BufRead", "BufNewFile",
+		"VimEnter" and "FileType".
+		If |goda-pm-plugin-option-on_event| exists, it is evaluated
+		when |goda-pm-plugin-option-on_event|.
+		NOTE: To use the feature, you need goda-pm-ext-lazy.vim.
+
+                                                *goda-pm-plugin-option-on_lua*
+on_lua		(list) or (string)
+		If it matches the required lua module root, goda-pm will call
+		|goda_pm#source()|.
+		NOTE: It is for Neovim only.
+		NOTE: It does not work for Neovim standard modules and require
+		in |vim.loop| modules.
+		NOTE: You cannot require on_lua plugins in
+		|goda-pm-plugin-option-hook_add|.  Because the plugins are not
+		initialized.
+		NOTE: To use the feature, you need goda-pm-ext-lazy.vim.
+
+                                                *goda-pm-plugin-option-on_map*
+on_map		(Dictionary) or (list) or (string)
+		If it is the Dictionary, the key is {mode} and the items are
+		{mapping} or [{mapping1}, {mapping2}, ...].
+		If it is the List, the items are {mapping} or [{mode},
+		{mapping1}, [{mapping2}, ...]].
+		If {mode} is omitted, "nxo" is used.
+		NOTE: You can use plugin prefix mappings.
+		For example, you can use "<Plug>(ref-" instead of
+		"<Plug>(ref-back)" and so on.
+		NOTE: It must be unique.
+		NOTE: To use the feature, you need goda-pm-ext-lazy.vim.
+
+                                               *goda-pm-plugin-option-on_path*
+on_path		(list) or (string)
+		If set to ".*", goda-pm will call |goda_pm#source()| on
+		editing all files.  Otherwise, goda-pm will call
+		|goda_pm#source()| if the buffer name is matched to the string
+		pattern.
+		NOTE: It is useful for explorer behavior plugins.
+		NOTE: To use the feature, you need goda-pm-ext-lazy.vim.
+
+                                        *goda-pm-plugin-option-on_post_source*
+on_post_source	(list) or (string)
+		Load the plugin after the listed plugins are loaded.
+		NOTE: The plugins must be lazy loaded plugins.
+		NOTE: To use the feature, you need goda-pm-ext-lazy.vim.
+
+                                               *goda-pm-plugin-option-on_root*
+on_root		(list) or (string)
+		Load the plugin when current directory has specified root
+		files.
+		It is useful to load project specific plugins.
+		NOTE: It must be a file rather than a directory.
+		NOTE: To use the feature, you need goda-pm-ext-lazy.vim.
+
+                                             *goda-pm-plugin-option-on_source*
+on_source	(list) or (string)
+		Load the plugin before the listed plugins are loaded.
+		NOTE: The plugins must be lazy loaded plugins.
+		NOTE: To use the feature, you need goda-pm-ext-lazy.vim.
+
+                                                  *goda-pm-plugin-option-path*
+path		(string)
+		Specify the plugin downloaded path.
+		If it is not an absolute path, it is converted to under the
+		plugin "base-path".
+		NOTE: It is set by protocol.
+
+		Default:
+		If it is not set, it will be error.
+
+                                              *goda-pm-plugin-option-priority*
+priority	(Number)
+		Plugin load priority.
+
+                                              *goda-pm-plugin-option-protocol*
+protocol	(string)
+		User specified protocol.
+
+                                         *goda-pm-plugin-option-protocolAttrs*
+protocolAttrs	(Dictionary)
+		It is a dictionary that protocols specific attributes.
+		See also |goda-pm-protocol-attrs|.
+
+                                                  *goda-pm-plugin-option-repo*
+repo		(string)
+		Specify the plugin repository.
+
+                                                   *goda-pm-plugin-option-rev*
+rev		(string)
+		Specify a revision number or branch/tag name.
+		If it is "*" in "git" protocol, goda-pm will use latest
+		released tag.  You can specify the wildcards like "0.*".
+		NOTE: In "http" protocol, it is the SHA-1 of what is
+		downloaded.
+
+                                                   *goda-pm-plugin-option-rtp*
+rtp		(string)
+		Specify the runtime path.
+		You can use it when the repository has the Vim plugin in a
+		subdirectory.
+		For example: https://github.com/rstacruz/sparkup
+		If it is empty string, goda-pm will not add the path to
+		'runtimepath'.  It is useful to manage non-plugin repositories
+		or already added to 'runtimepath' plugin manually.
+		NOTE: If it is empty string,
+		|goda-pm-plugin-option-hook_source| and
+		|goda-pm-plugin-option-hook_post_source| hooks are not called.
+
+		Default: Same as |goda-pm-plugin-option-path|.
+
+                                           *goda-pm-plugin-option-script_type*
+script_type	(string)
+		Specify the script type.  It is useful for non-official
+		categorized plugins.
+		For example: "indent", "plugin", "ftplugin", ...
+		NOTE: You must not specify it for categorized plugins.
+
+                                                   *goda-pm-plugin-option-url*
+url		(string)
+		Specify the webpage URL.
+		NOTE: It is set by protocol.
+
+------------------------------------------------------------------------------
+HOOKS                                                          *goda-pm-hooks*
+
+		The string is split into lines.
+		It is useful for the plugins initialization.
+
+		NOTE: The loading order is not guaranteed in non-lazy plugins.
+		NOTE: The string is executed as Ex commands.
+
+		You can use |Vim9| script for hooks.  But you cannot use
+		|Vim9| script in global |goda-pm-plugin-option-hook_add|.
+		Because it may be merged for optimize.
+
+		To use |Vim9| script, you need to use |:vim9script| or |:def|.
+		NOTE: |Vim9| script syntax is very strict and it is hard to
+		debug.  It is experimental feature.
+
+		The arguments of the hook are |g:goda_pm#hook_args|.
+		To return a value from a hook, assign it to
+		|g:goda_pm#hook_result|.  The variable is reset to |v:null|
+		before each hook execution.
+>vim
+		hook_source = '''
+		  let g:goda_pm#hook_result = s:configure()
+		'''
+<
+                                            *goda-pm-plugin-option-hooks_file*
+hooks_file	(string) or (list)
+		Hooks file path.  It must be valid path.
+		It is useful to define long hooks.
+
+		The file format is:
+
+		{hook_name} {start_marker}
+		...
+		{end_marker}
+
+		{start_marker} and {end_marker} are from
+		|goda-pm-option-hooksFileMarker|.
+		{hook_name} is "hook_xxx" or "lua_xxx" or
+		|goda-pm-plugin-option-ftplugin| filetype.
+
+		Example:
+>vim
+		" hook_source {{{
+		let g:foo = 'bar'
+		" }}}
+		" cpp {{{
+		let g:bar = 'baz'
+		" }}}
+		" Use vim9script
+		" hook_update {{{
+		vim9script
+		g:bar = 'baz'
+		" }}}
+<
+                                              *goda-pm-plugin-option-hook_add*
+hook_add	(string)
+		It is executed after the plugin is added.
+		It is mainly used for defining mappings.
+		NOTE: You cannot call plugin function in "hook_add".
+		Because the plugin is not sourced when "hook_add".
+		NOTE: It is not executed when the plugin is not installed.
+
+                                   *goda-pm-plugin-option-hook_depends_update*
+hook_depends_update (string)
+		It is executed after |goda-pm-plugin-option-depends| plugins
+		are updated.
+		NOTE: To use the feature, you need the installer of
+		goda-pm-ext (|goda-pm-exts|).
+
+                                      *goda-pm-plugin-option-hook_done_update*
+hook_done_update (string)
+		It is executed after plugins are updated.
+		NOTE: To use the feature, you need the installer of
+		goda-pm-ext.
+
+                                      *goda-pm-plugin-option-hook_post_source*
+hook_post_source (string)
+		It is executed after the plugin script files are sourced.
+		It does not work for non-lazy plugins.
+		NOTE: |goda-pm-plugin-option-rtp| must not be empty string.
+
+                                *goda-pm-plugin-option-hook_post_check_update*
+hook_post_check_update (string)
+		It is executed after checking for updates.
+		If it set |g:goda_pm#hook_result| to |v:true|, the update
+		will be skipped.
+		It is useful to check updated result.
+
+		args (|g:goda_pm#hook_args|):
+			{oldRev}: Current revision.
+
+			{newRev}: Updated revision.
+
+			{plugin}: Plugin dictionary.
+
+		NOTE: The plugin may not be sourced.
+		NOTE: To use the feature, you need the installer of
+		goda-pm-ext.
+
+                                      *goda-pm-plugin-option-hook_post_update*
+hook_post_update (string)
+		It is executed after updated and before the build of the
+		installer (its "build" action, and extAttrs.installerBuild).
+		NOTE: The plugin may not be sourced.
+		NOTE: To use the feature, you need the installer of
+		goda-pm-ext.
+
+                                       *goda-pm-plugin-option-hook_pre_update*
+hook_pre_update (string)
+		It is executed before updated.
+		NOTE: The plugin may not be sourced.
+		NOTE: To use the feature, you need the installer of
+		goda-pm-ext.
+
+                                           *goda-pm-plugin-option-hook_source*
+hook_source	(string)
+		It is executed after plugin runtimepath is added and before
+		the plugin script files are sourced.
+		It also works for non-lazy plugins.
+		It is mainly used for plugin configure.
+		NOTE: The "sourced" means after |goda_pm#min#load_state()| or
+		autoloaded.
+		NOTE: |goda-pm-plugin-option-rtp| must not be empty string.
+
+                                               *goda-pm-plugin-option-lua_xxx*
+lua_xxx		(string)
+		Lua language string hook instead of Vim script.
+		It is converted to "hook_xxx" key.
+
+------------------------------------------------------------------------------
+PLUGINS MERGED FEATURE                                         *goda-pm-merge*
+
+goda-pm.vim copies the files of multiple plugins into a single directory and
+loads them as plugins by default.  It expects to improve performance.
+
+That path is `{base-path}/{name}/.goda_pm`.
+
+Other plugin managers add a plugin path into 'runtimepath' to load external
+plugins.  However, if the 'runtimepath' is very large then it will load
+slowly.  This is because Vim needs to find and load all 'runtimepath' to load
+plugins.  In goda-pm.vim, this problem does not exist.
+
+The following plugins will not be merged to prevent merge problems
+- |goda-pm-plugin-option-merged| is v:false
+- local plugin (|goda-pm-plugin-option-local|, local.Load() of goda-pm-ext)
+- lazy loaded plugin (|goda-pm-plugin-option-lazy|)
+- uses |goda-pm-plugin-option-hook_post_update|
+- uses |goda-pm-plugin-option-if|
+
+The files of |goda-pm-option-skipMergeFilenamePattern| are not merged.
+
+------------------------------------------------------------------------------
+EXT ATTRS                                                  *goda-pm-ext-attrs*
+
+There are the ext specific attributes for items (extAttrs).  Please read the
+Ext documentation.
+
+------------------------------------------------------------------------------
+PROTOCOL ATTRS                                        *goda-pm-protocol-attrs*
+
+There are the protocol specific attributes for items (protocolAttrs).
+Please read the Protocol documentation.
 
 ==============================================================================
-FUNCTIONS                                                   *goda-pm-functions*
+FUNCTIONS                                                  *goda-pm-functions*
 
                                                     *goda_pm#min#load_state()*
 goda_pm#min#load_state({base-path}[, {name}])
