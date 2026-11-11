@@ -10,6 +10,16 @@ function goda_pm#source#_source(plugins, function_prefix) abort
           \ ->map({ _, val -> g:goda_pm.state.plugins->get(val, {}) })
   endif
 
+  call filter(plugins, { _, val ->
+        \  !val->empty() && !val.sourced && val.rtp !=# ''
+        \ })
+  if plugins->empty()
+    " Nothing to source (an event of plugins already sourced, say): the
+    " runtimepath and the filetype plugins stay as they are.
+    call s:reload_autoload(a:function_prefix)
+    return []
+  endif
+
   let rtps = &runtimepath->goda_pm#util#_split_rtp()
   const index = rtps->index(goda_pm#util#_get_runtime_path())
   if index < 0
@@ -18,26 +28,21 @@ function goda_pm#source#_source(plugins, function_prefix) abort
 
   let sourced = []
   for plugin in plugins
-        \ ->filter({ _, val ->
-        \  !val->empty() && !val.sourced && val.rtp !=# ''
-        \ })
     call s:source_plugin(rtps, index, plugin, sourced)
   endfor
+  if sourced->empty()
+    " (Their "if" or "external_commands" kept them out.)
+    call s:reload_autoload(a:function_prefix)
+    return []
+  endif
 
   const filetype_before = 'autocmd FileType'->execute()
 
   let &runtimepath = rtps->goda_pm#util#_join_rtp(&runtimepath, '')
 
-  if !sourced->empty()
-    call goda_pm#util#_call_hook('source', sourced)
-  endif
+  call goda_pm#util#_call_hook('source', sourced)
 
-  if a:function_prefix->stridx('#') > 0
-    " NOTE: Reload autoload script
-    " Because autoload script is not loaded twice.
-    execute 'runtime' 'autoload/' .. a:function_prefix
-          \ ->substitute('#$', '.vim', '')->substitute('#', '/', 'g')
-  endif
+  call s:reload_autoload(a:function_prefix)
 
   " Reload script files.
   for plugin in sourced
@@ -118,11 +123,20 @@ function goda_pm#source#_source(plugins, function_prefix) abort
     silent! let &l:filetype = &l:filetype
   endif
 
-  if !has('vim_starting') && !sourced->empty()
+  if !has('vim_starting')
     call goda_pm#util#_call_hook('post_source', sourced)
   endif
 
   return sourced
+endfunction
+
+" The autoload script of {function_prefix} ("foo#bar#"), sourced again: an
+" autoload script is not loaded twice.
+function s:reload_autoload(function_prefix) abort
+  if a:function_prefix->stridx('#') > 0
+    execute 'runtime' 'autoload/' .. a:function_prefix
+          \ ->substitute('#$', '.vim', '')->substitute('#', '/', 'g')
+  endif
 endfunction
 
 function s:source_plugin(rtps, index, plugin, sourced) abort
@@ -226,25 +240,22 @@ function s:is_reset_ftplugin(plugins) abort
     return 0
   endif
 
+  const ft = &l:filetype
   for plugin in a:plugins
-    let ftplugin = plugin.rtp .. '/ftplugin/' .. &l:filetype
-    let after = plugin.rtp .. '/after/ftplugin/' .. &l:filetype
-    let check_ftplugin = !(['ftplugin', 'indent',
-          \ 'after/ftplugin', 'after/indent',]
-          \ ->filter({ _, val -> printf('%s/%s/%s.vim',
-          \          plugin.rtp, val, &l:filetype)->filereadable()
-          \          || printf('%s/%s/%s.lua',
-          \          plugin.rtp, val, &l:filetype)->filereadable()
-        \ })->empty())
-    if check_ftplugin
-          \ || ftplugin->isdirectory()
-          \ || after->isdirectory()
-          \ || (ftplugin .. '_*.vim')->glob(v:true) !=# ''
-          \ || (after .. '_*.vim')->glob(v:true) !=# ''
-          \ || (ftplugin .. '_*.lua')->glob(v:true) !=# ''
-          \ || (after .. '_*.lua')->glob(v:true) !=# ''
-      return 1
-    endif
+    " Only the directories the plugin has: most have none of them.
+    for dir in ['ftplugin', 'indent', 'after/ftplugin', 'after/indent']
+          \ ->map({ _, val -> plugin.rtp .. '/' .. val })
+          \ ->filter({ _, val -> val->isdirectory() })
+      const base = dir .. '/' .. ft
+      if (base .. '.vim')->filereadable() || (base .. '.lua')->filereadable()
+        return 1
+      endif
+      if dir =~# 'ftplugin$' && (base->isdirectory()
+            \ || (base .. '_*.vim')->glob(v:true) !=# ''
+            \ || (base .. '_*.lua')->glob(v:true) !=# '')
+        return 1
+      endif
+    endfor
   endfor
 
   return 0

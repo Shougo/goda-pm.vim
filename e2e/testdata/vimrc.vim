@@ -122,6 +122,12 @@ function! s:update() abort
   call s:check('on_ft', get(g:, 'lazy_ft'), 1)
   call s:check('ftplugin', get(b:, 'ftplugin_mergedft'), 1)
   call s:check('ftplugin of hooks file', get(b:, 'hooks_ftplugin'), 1)
+  " The ftplugin of the plugin sourced for the filetype.
+  call s:check('ftplugin of on_ft', get(b:, 'lazy_ftplugin'), 1)
+  " Sourced already: nothing changes.
+  let rtp = &runtimepath
+  call s:check('source again', [goda_pm#source(['lazy-ft.vim']), &runtimepath ==# rtp],
+        \ [[], 1])
 
   if has('nvim')
     call s:check('lua get', luaeval("require('goda_pm').get('foo.vim').name"), 'foo.vim')
