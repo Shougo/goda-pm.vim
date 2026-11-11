@@ -114,3 +114,21 @@ func TestDecodeParams(t *testing.T) {
 		t.Errorf("got %+v", p)
 	}
 }
+
+// state.vim has no hook_add, ftplugin nor lua_*: only MakeState uses them.
+func TestStatePlugins(t *testing.T) {
+	in := map[string]Plugin{"foo": {
+		"name": "foo", "hook_add": "let g:add = 1", "hook_source": "let g:source = 1",
+		"lua_source": "vim.g.source = 1", "lua_add": "vim.g.add = 1",
+		"ftplugin": map[string]string{"c": "setlocal ts=8"}, "on_ft": "c",
+	}}
+	got := statePlugins(in)
+	want := map[string]Plugin{"foo": {"name": "foo", "hook_source": "let g:source = 1", "on_ft": "c"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	// The plugins MakeState goes on with keep them.
+	if _, ok := in["foo"]["hook_add"]; !ok {
+		t.Errorf("hook_add removed from the plugin: %v", in["foo"])
+	}
+}

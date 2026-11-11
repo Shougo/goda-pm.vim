@@ -675,6 +675,10 @@ goda_pm#check_clean()
                                                                *goda_pm#get()*
 goda_pm#get([{name}])
 		The plugin {name}, or all of them.
+		NOTE: What only |goda_pm#make_state()| uses is not in them:
+		"hook_add" (run by the startup script), "ftplugin" (in the
+		ftplugin files of the merged plugins) and the "lua_" hooks
+		(the "hook_" ones run them).
 
                                                             *goda_pm#source()*
 goda_pm#source([{plugins}[, {function-prefix}]])

@@ -78,6 +78,8 @@ function! s:update() abort
   call s:check('load_state', s:load_state, 0)
   call s:check('inline vimrc', get(g:, 'inline_vimrc'), 1)
   call s:check('hook_add', get(g:, 'hook_add_foo'), 1)
+  " Run by startup.vim: not in the state.
+  call s:check('no hook_add in the state', has_key(goda_pm#get('foo.vim'), 'hook_add'), 0)
   call s:check('hook_add of hooks_file', get(g:, 'merged_hook_add'), 1)
   call s:check('foo loaded', get(g:, 'foo_version'), 1)
   call s:check('merged autoload', merged#hello(), 'merged')
@@ -122,6 +124,9 @@ function! s:update() abort
   call s:check('on_ft', get(g:, 'lazy_ft'), 1)
   call s:check('ftplugin', get(b:, 'ftplugin_mergedft'), 1)
   call s:check('ftplugin of hooks file', get(b:, 'hooks_ftplugin'), 1)
+  " In the merged ftplugin files: not in the state.
+  call s:check('no ftplugin in the state',
+        \ goda_pm#get()->values()->filter({ _, p -> p->has_key('ftplugin') })->len(), 0)
   " The ftplugin of the plugin sourced for the filetype.
   call s:check('ftplugin of on_ft', get(b:, 'lazy_ftplugin'), 1)
   " Sourced already: nothing changes.
