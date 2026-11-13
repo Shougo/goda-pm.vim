@@ -1,7 +1,7 @@
 github.com/Shougo/goda-pm-ext v0.0.0-20261109004415-d30a0c98123d h1:uIKtWbB/+fL3YlNndMIOz+fBLJa3iTw1yZOAi/AaMB8=
 github.com/Shougo/goda-pm-ext v0.0.0-20261109004415-d30a0c98123d/go.mod h1:LthtHN2VgV/KyOQ8db9JiN7N8CkHCpaWFbIwHe+tsWE=
-github.com/Shougo/goda-pm-ext-lazy.vim v0.0.0-20261109004454-3562bdc78a78 h1:WgLuWWLMODg7H7fAXWoAf9aycH1ROVAQfHCTUjZveeU=
-github.com/Shougo/goda-pm-ext-lazy.vim v0.0.0-20261109004454-3562bdc78a78/go.mod h1:ce7edk50p37YnjzjsagNUi3wlOcVQ02IEdaD0WIGg7s=
+github.com/Shougo/goda-pm-ext-lazy.vim v0.1.0 h1:AKQDE+I1ts11R/4JkfkeGHleSGxQRXgAGxNjupBxkwg=
+github.com/Shougo/goda-pm-ext-lazy.vim v0.1.0/go.mod h1:ce7edk50p37YnjzjsagNUi3wlOcVQ02IEdaD0WIGg7s=
 github.com/Shougo/goda-pm.vim v0.1.2-0.20261108231718-aafc18ee236b h1:9u4L0z6oRbNU85EkbDpG+4rIlwMzYL91G9VAQW/J3NI=
 github.com/Shougo/goda-pm.vim v0.1.2-0.20261108231718-aafc18ee236b/go.mod h1:v0/Im34oYqAU+cPiRqwOovTSrqlT12T2SR3OFPWQlSg=
 github.com/Shougo/goda.vim v0.7.1 h1:bXVc+xooI9OWtvoHthPqdpHLtl5zpMLGdw0f/P5lYFE=
