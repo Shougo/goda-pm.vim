@@ -534,6 +534,10 @@ hook_add	(string)
 		NOTE: You cannot call plugin function in "hook_add".
 		Because the plugin is not sourced when "hook_add".
 		NOTE: It is not executed when the plugin is not installed.
+		It is executed when the plugin is installed, before
+		|goda-pm-plugin-option-hook_post_update| (the installer of
+		goda-pm-ext): what the hooks of the plugin use, set by it,
+		is set then.
 
                                    *goda-pm-plugin-option-hook_depends_update*
 hook_depends_update (string)
@@ -676,7 +680,8 @@ goda_pm#check_clean()
 goda_pm#get([{name}])
 		The plugin {name}, or all of them.
 		NOTE: What only |goda_pm#make_state()| uses is not in them:
-		"hook_add" (run by the startup script), "ftplugin" (in the
+		"hook_add" (run by the startup script; that of a plugin not
+		installed is, for its installation), "ftplugin" (in the
 		ftplugin files of the merged plugins) and the "lua_" hooks
 		(the "hook_" ones run them).
 

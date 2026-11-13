@@ -635,7 +635,11 @@ func (s *Server) makeState(ctx context.Context, h sdk.Host, sa stateArgs) error 
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)
-	if err := enc.Encode([]any{statePlugins(recordPlugins), map[string]any{}, options, existing, multipleHooks, sa.ExtraArgs}); err != nil {
+	inStartup := map[string]bool{}
+	for _, p := range available {
+		inStartup[p.Name()] = true
+	}
+	if err := enc.Encode([]any{statePlugins(recordPlugins, inStartup), map[string]any{}, options, existing, multipleHooks, sa.ExtraArgs}); err != nil {
 		return err
 	}
 	if err := os.WriteFile(filepath.Join(stateDir, "state.vim"), bytes.TrimRight(buf.Bytes(), "\n"), 0o644); err != nil {
@@ -668,15 +672,16 @@ func (s *Server) makeState(ctx context.Context, h sdk.Host, sa stateArgs) error 
 }
 
 // statePlugins are the plugins as state.vim has them: without what only
-// MakeState uses, which Vim reads at every startup for nothing. hook_add is
-// in startup.vim, ftplugin in the ftplugin files of the merged directory,
-// and the lua_* hooks are hook_* ones (or not run, without Lua).
-func statePlugins(plugins map[string]Plugin) map[string]Plugin {
+// MakeState uses, which Vim reads at every startup for nothing. The hook_add
+// of those of inStartup is in startup.vim (that of the others, not installed
+// yet, is run when they are), ftplugin in the ftplugin files of the merged
+// directory, and the lua_* hooks are hook_* ones (or not run, without Lua).
+func statePlugins(plugins map[string]Plugin, inStartup map[string]bool) map[string]Plugin {
 	out := make(map[string]Plugin, len(plugins))
 	for name, p := range plugins {
 		q := make(Plugin, len(p))
 		for k, v := range p {
-			if k == "hook_add" || k == "ftplugin" || strings.HasPrefix(k, "lua_") {
+			if k == "hook_add" && inStartup[name] || k == "ftplugin" || strings.HasPrefix(k, "lua_") {
 				continue
 			}
 			q[k] = v
