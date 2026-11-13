@@ -179,6 +179,7 @@ repo = 'example.com/test/foo.vim'
 hook_add = 'let g:hook_add_foo = 1'
 hook_post_update = '''
 let g:post_update_foo = get(g:, 'post_update_foo', 0) + 1
+let g:post_update_hook_add = get(g:, 'hook_add_foo', 0)
 let g:post_update_cwd = getcwd()
 if get(g:, 'test_build')
   call goda_pm#build()

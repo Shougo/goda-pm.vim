@@ -71,6 +71,11 @@ function! s:install() abort
   call s:check('failed', goda_pm#sync_ext_action('installer', 'getFailed'), [])
   " The merged plugins are installed: the state is made again.
   call s:check('make_state_post after install', g:make_state_post, 1)
+  " Installed now: their hook_add ran (not at startup: they were not
+  " installed), before hook_post_update, which may use what it sets.
+  call s:check('hook_add before hook_post_update', [get(g:, 'post_update_foo'),
+        \ get(g:, 'post_update_hook_add')], [1, 1])
+  call s:check('hook_add of hooks_file at install', get(g:, 'merged_hook_add'), 1)
   call s:check('installer log', filereadable($GODA_PM_FILES . '/installer.log'), 1)
 endfunction
 
