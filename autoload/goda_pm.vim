@@ -44,6 +44,22 @@ function! s:default_bin() abort
   return s:cache_dir() . '/goda-pm' . (has('win32') ? '.exe' : '')
 endfunction
 
+" The options of goda#register(): the version of the Vim script, and how to
+" build the binary when there is none or it is of another version (goda.vim
+" builds it then). Not for the binary of g:goda_pm#binary: the user builds it.
+function! s:register_opts() abort
+  if exists('g:goda_pm#binary')
+    return s:version
+  endif
+  return extend(#{build: function('s:build_binary'), bin: s:default_bin()}, s:version)
+endfunction
+
+" The build of the binary for goda.vim, as it starts it (nothing else: it
+" is not running).
+function! s:build_binary() abort
+  call goda#build(#{name: 'pm', dir: s:config_dir(), bin: s:default_bin()})
+endfunction
+
 function! s:config_dir() abort
   if exists('g:goda_pm#config_dir')
     return expand(g:goda_pm#config_dir)
@@ -67,7 +83,7 @@ function! goda_pm#build() abort
   endif
   let s:running = {}
   call goda#build(#{name: 'pm', dir: s:config_dir(), bin: s:default_bin()})
-  call goda#register('pm', function('s:start'), s:version)
+  call goda#register('pm', function('s:start'), s:register_opts())
 endfunction
 
 function! s:build_waited(...) abort
@@ -105,7 +121,7 @@ endfunction
 " goda_pm#source() and the lazy loading do not need goda.vim.
 function! s:register() abort
   if !exists('s:registered')
-    call goda#register('pm', function('s:start'), s:version)
+    call goda#register('pm', function('s:start'), s:register_opts())
     let s:registered = v:true
   endif
 endfunction

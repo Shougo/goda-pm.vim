@@ -709,6 +709,10 @@ goda_pm#build()
 		Build the configuration into |g:goda_pm#binary|, with
 		|goda#build()| of goda.vim.  The running binary is stopped,
 		and the new one starts with the next request.
+		NOTE: The binary is built by itself when there is none, the
+		configuration is newer, or it is of another version than the
+		Vim script (see "build" of |goda#register()|): not one of
+		|g:goda_pm#binary| set by you.
 		While the binary runs an action or makes the state, the
 		build waits for them: hook_post_update of goda-pm.vim can
 		call it.
