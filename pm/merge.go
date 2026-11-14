@@ -3,6 +3,7 @@ package pm
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -45,6 +46,9 @@ func (s *Server) mergePlugins(ctx context.Context, h sdk.Host, basePath, name, r
 	if mergeDocs {
 		srcs = []string{"doc", "ftdetect"}
 	}
+	// What could not be placed: said once, at the end (dpp.vim throws).
+	var failed []error
+	docsFailed := false
 	for _, p := range plugins {
 		path := p.String("path")
 		for _, src := range srcs {
@@ -64,7 +68,10 @@ func (s *Server) mergePlugins(ctx context.Context, h sdk.Host, basePath, name, r
 				if skip.MatchString(e.Name()) {
 					continue
 				}
-				linkPath(windows, filepath.Join(srcDir, e.Name()), filepath.Join(dest, e.Name()))
+				if errs := linkPath(windows, filepath.Join(srcDir, e.Name()), filepath.Join(dest, e.Name())); len(errs) > 0 {
+					failed = append(failed, errs...)
+					docsFailed = docsFailed || src == "doc"
+				}
 			}
 		}
 	}
@@ -89,9 +96,16 @@ func (s *Server) mergePlugins(ctx context.Context, h sdk.Host, basePath, name, r
 		if err := os.WriteFile(tagsPath, []byte(strings.Join(tagLines, "\n")), 0o644); err != nil {
 			return err
 		}
-		b, _ := json.Marshal(recordDocs)
-		if err := os.WriteFile(filepath.Join(basePath, name, "doc.json"), b, 0o644); err != nil {
-			return err
+		// Not when a document is missing: they are merged again next time
+		// (the same doc.json would say there is nothing to do).
+		docJSON := filepath.Join(basePath, name, "doc.json")
+		if docsFailed {
+			_ = os.Remove(docJSON)
+		} else {
+			b, _ := json.Marshal(recordDocs)
+			if err := os.WriteFile(docJSON, b, 0o644); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -112,45 +126,72 @@ func (s *Server) mergePlugins(ctx context.Context, h sdk.Host, basePath, name, r
 			if defaultSkip[e.Name()] || skip.MatchString(e.Name()) {
 				continue
 			}
-			linkPath(windows, filepath.Join(path, e.Name()), filepath.Join(rtpDir, e.Name()))
+			failed = append(failed, linkPath(windows, filepath.Join(path, e.Name()), filepath.Join(rtpDir, e.Name()))...)
 		}
+	}
+	if len(failed) > 0 {
+		s.printError(ctx, h, "%d files could not be merged into %s: %v", len(failed), rtpDir, failed[0])
 	}
 	return nil
 }
 
 // linkPath links src (a file, or the files of a directory, recursively) to
-// dest: a symbolic link, or a hard link on MS-Windows. What exists is kept.
-func linkPath(windows bool, src, dest string) {
+// dest: a symbolic link, or a hard link on MS-Windows; a copy when it
+// cannot be made (a hard link across drives, a symbolic link where they
+// are not allowed). What exists is kept. The errors are those of what
+// could not be placed.
+func linkPath(windows bool, src, dest string) []error {
 	st, err := os.Stat(src)
 	if err != nil {
-		return
+		return nil
 	}
 	if st.IsDir() {
 		if _, err := os.Lstat(dest); err != nil {
-			if os.MkdirAll(dest, 0o755) != nil {
-				return
+			if err := os.MkdirAll(dest, 0o755); err != nil {
+				return []error{err}
 			}
 		}
 		if !isDir(dest) {
-			return
+			return nil
 		}
 		entries, err := os.ReadDir(src)
 		if err != nil {
-			return
+			return []error{err}
 		}
+		var errs []error
 		for _, e := range entries {
-			linkPath(windows, filepath.Join(src, e.Name()), filepath.Join(dest, e.Name()))
+			errs = append(errs, linkPath(windows, filepath.Join(src, e.Name()), filepath.Join(dest, e.Name()))...)
 		}
-		return
+		return errs
 	}
 	if _, err := os.Lstat(dest); err == nil {
-		return
+		return nil
 	}
+	err = linkFile(windows, src, dest)
+	if err == nil {
+		return nil
+	}
+	if cerr := copyFile(src, dest, st.Mode()); cerr != nil {
+		return []error{fmt.Errorf("%w; copy: %v", err, cerr)}
+	}
+	return nil
+}
+
+// linkFile makes the link of linkPath (a variable for the tests).
+var linkFile = func(windows bool, src, dest string) error {
 	if windows {
-		_ = os.Link(src, dest)
-	} else {
-		_ = os.Symlink(src, dest)
+		return os.Link(src, dest)
 	}
+	return os.Symlink(src, dest)
+}
+
+// copyFile is the copy of linkPath (a variable for the tests).
+var copyFile = func(src, dest string, mode os.FileMode) error {
+	b, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dest, b, mode.Perm())
 }
 
 func hasHelpFiles(dir string) bool {
