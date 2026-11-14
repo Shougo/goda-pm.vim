@@ -48,8 +48,9 @@ goda.vim is needed only to make the state and to run the exts: it must be in
 CONFIGURATION                                          *goda-pm-configuration*
 
 The configuration is a Go module in |g:goda_pm#config_dir|: a main.go that
-adds the protocols and the exts (|goda-pm-exts|), and gives the plugins
-(examples/config has one, which loads TOML files and the plugins of ~/work):
+adds the protocols and the exts (|goda-pm-exts|), and gives the plugins (a
+whole one, which loads TOML files and the plugins of ~/work: the author's,
+https://github.com/Shougo/shougo-s-github/tree/master/vim/rc/goda-pm):
 >go
 	import (
 		"github.com/Shougo/goda-pm-ext-lazy.vim/ext/lazy"

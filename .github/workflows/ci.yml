@@ -47,8 +47,6 @@ jobs:
         # behind until it is tidied. Let go update it.
         env:
           GOFLAGS: -mod=mod
-      - run: go vet ./...
-        working-directory: examples/config
 
   # Windows and macOS: the same tests, end-to-end ones included.
   other:

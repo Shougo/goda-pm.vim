@@ -32,9 +32,10 @@ instead of TypeScript, and no Deno.
 
 ## Usage
 
-The configuration is a Go module (see [examples/config](examples/config)) in
-`~/.vim/goda-pm` (Neovim: `stdpath('config') .. '/goda-pm'`): it adds the
-protocols and the exts, and gives the plugins.
+The configuration is a Go module in `~/.vim/goda-pm` (Neovim:
+`stdpath('config') .. '/goda-pm'`): it adds the protocols and the exts, and
+gives the plugins (a whole one, which loads TOML files and the plugins of
+`~/work`: [the author's](https://github.com/Shougo/shougo-s-github/tree/master/vim/rc/goda-pm)).
 
 ```go
 import (
