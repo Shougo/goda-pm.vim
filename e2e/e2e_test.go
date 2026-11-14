@@ -135,8 +135,11 @@ func setup(t *testing.T) *env {
 		"plugin/lazy_cmd.vim": "command! LazyCmd let g:lazy_cmd = 1\n",
 	})
 	e.repo(t, "dep.vim", map[string]string{"plugin/dep.vim": "let g:dep_loaded = 1\n"})
+	// Its ftplugin of the filetype in after/ (ftplugin/ has another): the
+	// second directory looked into.
 	e.repo(t, "lazy-ft.vim", map[string]string{"plugin/lazy_ft.vim": "let g:lazy_ft = 1\n",
-		"ftplugin/mergedft.vim": "let b:lazy_ftplugin = 1\n"})
+		"ftplugin/otherft.vim":        "let b:lazy_otherft = 1\n",
+		"after/ftplugin/mergedft.vim": "let b:lazy_ftplugin = 1\n"})
 	e.repo(t, "lazy-func.vim", map[string]string{
 		"autoload/lazy_func.vim": "function lazy_func#call() abort\n  return 42\nendfunction\n",
 		"README.md":              "# lazy-func.vim\n\n## Usage\n",

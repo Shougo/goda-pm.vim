@@ -246,7 +246,8 @@ function s:is_reset_ftplugin(plugins) abort
     for dir in ['ftplugin', 'indent', 'after/ftplugin', 'after/indent']
           \ ->map({ _, val -> plugin.rtp .. '/' .. val })
           \ ->filter({ _, val -> val->isdirectory() })
-      const base = dir .. '/' .. ft
+      " (let: a const of the loop is E995 the second time.)
+      let base = dir .. '/' .. ft
       if (base .. '.vim')->filereadable() || (base .. '.lua')->filereadable()
         return 1
       endif
