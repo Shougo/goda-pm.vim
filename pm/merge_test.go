@@ -112,3 +112,54 @@ func TestMergePluginsFails(t *testing.T) {
 		t.Errorf("not merged again: %v", err)
 	}
 }
+
+// A document removed from the runtime directory with doc.json kept (or not
+// placed by an older version): it is merged again.
+func TestMergePluginsMissingDocs(t *testing.T) {
+	base := t.TempDir()
+	plugin := filepath.Join(base, "repos", "foo")
+	writeFiles(t, plugin, map[string]string{
+		"doc/foo.txt": "*foo.txt*\n",
+		"doc/tags":    "foo.txt\tfoo.txt\t/*foo.txt*\n",
+	})
+	rtp := filepath.Join(base, "state", ".goda_pm")
+	plugins := []Plugin{{"name": "foo", "path": plugin, "rtp": plugin}}
+	s := &Server{}
+	merge := func() *testHost {
+		t.Helper()
+		h := &testHost{}
+		if err := s.mergePlugins(context.Background(), h, base, "state", rtp, `^tags$`, plugins, false); err != nil {
+			t.Fatal(err)
+		}
+		return h
+	}
+	helptags := func(h *testHost) bool {
+		for _, c := range h.calls {
+			if c == "goda_pm#util#_helptags" {
+				return true
+			}
+		}
+		return false
+	}
+	doc := filepath.Join(rtp, "doc", "foo.txt")
+
+	if h := merge(); !helptags(h) {
+		t.Fatalf("not merged: %v", h.calls)
+	}
+	// Nothing to do: the same documents, and they are there.
+	if h := merge(); helptags(h) {
+		t.Errorf("merged again: %v", h.calls)
+	}
+	if err := os.Remove(doc); err != nil {
+		t.Fatal(err)
+	}
+	if h := merge(); !helptags(h) {
+		t.Errorf("not merged again: %v", h.calls)
+	}
+	if _, err := os.Stat(doc); err != nil {
+		t.Errorf("not merged again: %v", err)
+	}
+	if h := merge(); helptags(h) {
+		t.Errorf("merged again: %v", h.calls)
+	}
+}

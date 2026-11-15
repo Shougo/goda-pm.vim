@@ -632,7 +632,8 @@ The files of |goda-pm-option-skipMergeFilenamePattern| are not merged.
 The files are symbolic links (hard links on MS-Windows), or copies when the
 links cannot be made (a hard link to another drive, say).  The files that
 could not be placed are reported, and the documents are merged again by the
-next |goda_pm#make_state()|.
+next |goda_pm#make_state()|.  They are merged again too when one of them is
+not in the "doc" directory of the path above.
 
 ------------------------------------------------------------------------------
 EXT ATTRS                                                  *goda-pm-ext-attrs*

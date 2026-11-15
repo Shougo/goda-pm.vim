@@ -30,7 +30,11 @@ func (s *Server) mergePlugins(ctx context.Context, h sdk.Host, basePath, name, r
 		}
 	}
 	recordDocs := getRecordDocs(skip, plugins)
-	mergeDocs := !sameDocs(loadRecordDocs(basePath, name), recordDocs)
+	// Also when a document is not there (doc.json is only what was merged:
+	// a document removed since, or not placed by an older version, would
+	// never be merged again).
+	mergeDocs := !sameDocs(loadRecordDocs(basePath, name), recordDocs) ||
+		docsMissing(docDir, skip, plugins)
 	if mergeDocs {
 		entries, err := os.ReadDir(docDir)
 		if err != nil {
@@ -244,6 +248,30 @@ func getRecordDocs(skip *regexp.Regexp, plugins []Plugin) map[string]int64 {
 		}
 	}
 	return docs
+}
+
+// docsMissing is whether a document of the plugins is not in docDir.
+func docsMissing(docDir string, skip *regexp.Regexp, plugins []Plugin) bool {
+	for _, p := range plugins {
+		path := p.String("path")
+		srcDir := path + "/doc"
+		if path == "" || !isDir(srcDir) {
+			continue
+		}
+		entries, err := os.ReadDir(srcDir)
+		if err != nil {
+			continue
+		}
+		for _, e := range entries {
+			if skip.MatchString(e.Name()) {
+				continue
+			}
+			if _, err := os.Lstat(filepath.Join(docDir, e.Name())); err != nil {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func loadRecordDocs(basePath, name string) map[string]int64 {
