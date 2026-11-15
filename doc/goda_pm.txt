@@ -172,6 +172,10 @@ After an update, build them again, with no "go get -u":
 	repo = 'Shougo/goda-fi.vim'
 	hook_post_update = 'call goda_fi#build()'
 <
+The go.mod of a configuration is not updated by this, and it is still used
+where the workspace is not (gopls, the first build, a plugin it does not
+require yet): see |g:goda#workspace|.
+
 ==============================================================================
 OPTIONS                                                      *goda-pm-options*
 
