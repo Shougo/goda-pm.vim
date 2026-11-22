@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -119,7 +120,7 @@ func TestStartupHead(t *testing.T) {
 	if got, want := head[2], `let &runtimepath = '/a,/b''c'`; got != want {
 		t.Errorf("runtimepath: got %q, want %q", got, want)
 	}
-	if got, want := head[3], "let g:goda#workspace = ['"+dir+"/it''s']"; got != want {
+	if got, want := head[3], "let g:goda#workspace = ['"+strings.ReplaceAll(mod, "'", "''")+"']"; got != want {
 		t.Errorf("workspace: got %q, want %q", got, want)
 	}
 }
