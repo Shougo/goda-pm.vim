@@ -22,50 +22,13 @@ let s:next_id = 0
 " ---------------------------------------------------------------------------
 " Setup
 
-" The binary is machine specific, so it is not built into the configuration
-" directory (which belongs in your dotfiles) but into a cache directory.
-function! s:cache_dir() abort
-  if has('nvim')
-    let base = stdpath('cache')
-  elseif !empty($XDG_CACHE_HOME)
-    let base = $XDG_CACHE_HOME . '/vim'
-  elseif has('win32') && !empty($LOCALAPPDATA)
-    let base = $LOCALAPPDATA . '/vim'
-  else
-    let base = expand('~/.cache/vim', 1)
+" The setup of the binary, made when it is needed: goda_pm#source() and the
+" lazy loading do not need goda.vim.
+function! s:goda() abort
+  if !exists('s:configured')
+    let s:configured = goda#configured#new('pm', s:version)
   endif
-  return base . '/goda-pm'
-endfunction
-
-function! s:default_bin() abort
-  if exists('g:goda_pm#binary')
-    " (Not 'wildignore': '*.exe' in it on Windows made it "".)
-    return expand(g:goda_pm#binary, 1)
-  endif
-  return s:cache_dir() . '/goda-pm' . (has('win32') ? '.exe' : '')
-endfunction
-
-" The options of goda#register(): the version of the Vim script, and how to
-" build the binary when there is none or it is of another version (goda.vim
-" builds it then). Not for the binary of g:goda_pm#binary: the user builds it.
-function! s:register_opts() abort
-  if exists('g:goda_pm#binary')
-    return s:version
-  endif
-  return extend(#{build: function('s:build_binary'), bin: s:default_bin()}, s:version)
-endfunction
-
-" The build of the binary for goda.vim, as it starts it (nothing else: it
-" is not running).
-function! s:build_binary() abort
-  call goda#build(#{name: 'pm', dir: s:config_dir(), bin: s:default_bin()})
-endfunction
-
-function! s:config_dir() abort
-  if exists('g:goda_pm#config_dir')
-    return expand(g:goda_pm#config_dir, 1)
-  endif
-  return (has('nvim') ? stdpath('config') : expand('~/.vim', 1)) . '/goda-pm'
+  return s:configured
 endfunction
 
 " Build the user's configuration (a Go module in g:goda_pm#config_dir) with
@@ -83,8 +46,8 @@ function! goda_pm#build() abort
     return
   endif
   let s:running = {}
-  call goda#build(#{name: 'pm', dir: s:config_dir(), bin: s:default_bin()})
-  call goda#register('pm', function('s:start'), s:register_opts())
+  call s:goda().build()
+  call s:goda().register()
 endfunction
 
 function! s:build_waited(...) abort
@@ -95,34 +58,11 @@ function! s:build_waited(...) abort
   endtry
 endfunction
 
-" Start the binary: goda.vim calls it when a request needs the plugin "pm"
-" and no binary serves it.
-function! s:start() abort
-  let bin = s:default_bin()
-  if !executable(bin)
-    throw 'goda-pm: ' . bin . ' does not exist yet; build it with: call goda_pm#build()'
-  endif
-  let plugins = goda#start(bin)
-  if index(plugins, 'pm') < 0
-    if !empty(plugins)
-      call goda#stop(plugins[0])
-    endif
-    throw 'goda-pm: ' . bin . ' does not contain the "pm" plugin'
-  endif
-  " A binary built from an invalid configuration starts anyway and says why.
-  let status = goda#request('pm', 'status')
-  if type(status) == v:t_string && status !=# ''
-    call goda#stop('pm')
-    throw 'goda-pm: fix the configuration in ' . s:config_dir()
-          \ . ' and run goda_pm#build(): ' . status
-  endif
-endfunction
-
 " Register the binary with goda.vim: not when this script is loaded, for
 " goda_pm#source() and the lazy loading do not need goda.vim.
 function! s:register() abort
   if !exists('s:registered')
-    call goda#register('pm', function('s:start'), s:register_opts())
+    call s:goda().register()
     let s:registered = v:true
   endif
 endfunction
@@ -130,15 +70,15 @@ endfunction
 " Is the configuration newer than the binary (or is there no binary)? Not
 " with g:goda_pm#binary: that one is built by the user.
 function! s:needs_build() abort
-  if exists('g:goda_pm#binary') || !isdirectory(s:config_dir())
+  if exists('g:goda_pm#binary') || !isdirectory(s:goda().config_dir())
     return v:false
   endif
-  let bin_time = getftime(s:default_bin())
+  let bin_time = getftime(s:goda().binary())
   if bin_time < 0
     return v:true
   endif
-  for file in globpath(s:config_dir(), '*.go', v:true, v:true)
-        \ + globpath(s:config_dir(), 'go.mod', v:true, v:true)
+  for file in globpath(s:goda().config_dir(), '*.go', v:true, v:true)
+        \ + globpath(s:goda().config_dir(), 'go.mod', v:true, v:true)
     if getftime(file) > bin_time
       return v:true
     endif
@@ -290,7 +230,7 @@ function! s:make_state(base_path, name, extra_args, sync) abort
   let g:goda_pm.settings.base_path = base_path
   let g:goda_pm.settings.name = name
   let g:goda_pm.settings.config_dir = exists('g:goda_pm#binary')
-        \ ? '' : s:config_dir()
+        \ ? '' : s:goda().config_dir()
 
   try
     call s:prepare()
