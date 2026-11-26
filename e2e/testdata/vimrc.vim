@@ -192,6 +192,11 @@ function! s:main() abort
   catch
     call add(s:errors, 'exception: ' . v:exception . ' at ' . v:throwpoint)
   endtry
+  " Nothing in the log either: an error in a notification is only there.
+  " (goda.vim not loaded in this phase: no log.)
+  if exists('*goda#log')
+    call s:check('log', goda#log(), [])
+  endif
   if !empty(s:errors)
     let s:errors += ['messages:'] + split(execute('messages'), "\n")
     let s:errors += ['goda#log():'] + goda#log()
