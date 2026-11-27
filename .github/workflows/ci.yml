@@ -32,7 +32,7 @@ jobs:
           version: stable
       # After the editors: installing them may put a directory with the
       # runner's own, older Go first in PATH.
-      - uses: actions/setup-go@v7.0.0
+      - uses: actions/setup-go@v7.1.0
         with:
           go-version: ${{ matrix.go }}
       - run: go version && vim --version | head -n 3 && nvim --version | head -n 1
@@ -76,7 +76,7 @@ jobs:
         with:
           neovim: true
           version: stable
-      - uses: actions/setup-go@v7.0.0
+      - uses: actions/setup-go@v7.1.0
         with:
           go-version: stable
       # The editors that were installed: on MS-Windows, Git Bash's PATH has
